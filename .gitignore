@@ -1,2 +1,4 @@
 *.ipch
 *.opendb
+*.tlog
+NeuroEvolutional_'Spikes'_with_Erlang/x64/Debug/NeuroEvo.7aecbb14.tlog/*

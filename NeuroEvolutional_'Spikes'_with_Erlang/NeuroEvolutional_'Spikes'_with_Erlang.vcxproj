@@ -141,9 +141,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MainFrame.h" />
+    <ClInclude Include="Neat_Spikes_App.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MainFrame.cpp" />
+    <ClCompile Include="Neat_Spikes_App.cpp" />
     <ClCompile Include="NeuroEvolutional_%27Spikes%27_with_Erlang.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
