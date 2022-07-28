@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 28. Jul 2022 19:01
 %%%-------------------------------------------------------------------
--module(graphic).
+-module(graphics).
 -author("nadavhd").
 
 %% API
