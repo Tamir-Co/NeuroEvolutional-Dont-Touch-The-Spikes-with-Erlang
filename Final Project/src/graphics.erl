@@ -38,14 +38,15 @@ init(_Args) ->
 	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
 	wxSizer:add(SizerBG, StaticBitmapBG, []),
 
+
 	ImageBird = wxImage:new("images/bird.png", []),
-	BitmapBird = wxBitmap:new(wxImage:scale(ImageBird, 20, 20, [])),
+	BitmapBird = wxBitmap:new(wxImage:scale(ImageBird, 50, 50, [])),
 	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
 	wxSizer:add(SizerBird, StaticBitmapBird, []),
 
 	wxSizer:add(MainSizer, SizerBG, []),
 	wxSizer:add(MainSizer, SizerBird, []),
-	wxPanel:setSizer(Panel, MainSizer),
+%%	wxPanel:setSizer(Panel, MainSizer),
 
 	wxFrame:show(Frame),
 
