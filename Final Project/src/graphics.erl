@@ -17,8 +17,8 @@
 
 -define(SERVER, ?MODULE).
 
--define(BG_WIDTH,564).
--define(BG_HEIGHT,1024).
+-define(BG_WIDTH,500).
+-define(BG_HEIGHT,1000).
 
 start() ->
 	wx_object:start({local,?SERVER},?MODULE,[],[]).
@@ -29,26 +29,28 @@ init(_Args) ->
 	Panel  = wxPanel:new(Frame,[{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
 	_Button = wxButton:new(Frame, 10, [{label, "Start"}]),
 
-	MainSizer = wxBoxSizer:new(?wxHORIZONTAL),
-	wxSizer:add(MainSizer, Panel,[{flag,?wxEXPAND}]),
-	add_images(Panel),
+	MainSizer = wxBoxSizer:new(?wxVERTICAL),
+	SizerBird = wxStaticBoxSizer:new(?wxHORIZONTAL, Panel, [{label, "SizerBird"}]),
+	SizerBG = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, "SizerBG"}]),
+
+	ImageBG = wxImage:new("images/background.png", []),
+	BitmapBG = wxBitmap:new(wxImage:scale(ImageBG, ?BG_WIDTH, ?BG_HEIGHT, [{quality, ?wxIMAGE_QUALITY_HIGH}])),
+	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
+	wxSizer:add(SizerBG, StaticBitmapBG, []),
+
+	ImageBird = wxImage:new("images/bird.png", []),
+	BitmapBird = wxBitmap:new(wxImage:scale(ImageBird, 20, 20, [])),
+	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
+	wxSizer:add(SizerBird, StaticBitmapBird, []),
+
+	wxSizer:add(MainSizer, SizerBG, []),
+	wxSizer:add(MainSizer, SizerBird, []),
+	wxPanel:setSizer(Panel, MainSizer),
 
 	wxFrame:show(Frame),
-	wxPanel:connect(Panel, paint, [callback]),
-	timer:sleep(5000)
-	.
+
+	timer:sleep(10000)
+.
 
 handle_event(_Request, _State) ->
 	todo.
-
-add_images(Panel) ->
-	Rmap = wxImage:new("images/background.png"),
-	Rmapc = wxImage:scale(Rmap,?BG_WIDTH,?BG_HEIGHT),
-	BmpRMap = wxBitmap:new(Rmapc),
-	wxImage:destroy(Rmap),
-	wxImage:destroy(Rmapc),
-	DC2 = wxPaintDC:new(Panel),
-	wxDC:clear(DC2),
-	wxDC:drawBitmap(DC2,BmpRMap,{10,10}),
-	wxPaintDC:destroy(DC2)
-	.
