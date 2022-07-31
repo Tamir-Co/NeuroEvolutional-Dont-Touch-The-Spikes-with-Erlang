@@ -17,12 +17,19 @@
 
 -define(SERVER, ?MODULE).
 
--define(BG_WIDTH,500).
--define(BG_HEIGHT,1000).
--define(Timer,100).% Graphics Update Timer, default: 60
+-define(JUMP_SPEED, 5).
+
+-define(ButtonStartID, 10).
+-define(ButtonJumpID, 11).
+
+-define(BG_WIDTH, 500).
+-define(BG_HEIGHT, 1000).
+
+-define(Timer, 100).	% Graphics Update Timer, default: 60
 
 %% GRAPHICS RECORDS %%
--record(graphics_state, {frame, panel, bitmapBG, bitmapBird}).
+-record(graphics_state, {frame, panel, bitmapBG, bitmapBird, bird_list}).
+-record(bird, {x, y, velocityY, direction}).
 
 start() ->
 	wx_object:start({local,?SERVER},?MODULE,[],[]).
@@ -31,13 +38,15 @@ init(_Args) ->
 	WxServer = wx:new(),
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
 	Panel  = wxPanel:new(Frame,[{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
-	Button = wxButton:new(Frame, 10, [{label, "Start"}]),
+	ButtonStart = wxButton:new(Frame, ?ButtonStartID, [{label, "Start"}]),
+	ButtonJump = wxButton:new(Frame, ?ButtonJumpID, [{label, "Jump"}]),
 
 	MainSizer = wxBoxSizer:new(?wxHORIZONTAL),
 	UiSizer = wxBoxSizer:new(?wxVERTICAL),
 
 	wxSizer:add(MainSizer, Panel,[{flag,?wxEXPAND}]),
-	wxSizer:add(UiSizer, Button,[{flag,?wxALL bor ?wxEXPAND},{border, 2}]),
+	wxSizer:add(UiSizer, ButtonStart,[{flag,?wxALL bor ?wxEXPAND},{border, 2}]),
+	wxSizer:add(UiSizer, ButtonJump,[{flag,?wxALL bor ?wxEXPAND},{border, 2}]),
 	wxSizer:add(MainSizer, UiSizer),
 
 	ImageBG = wxImage:new("images/background.png", []),
@@ -55,7 +64,8 @@ init(_Args) ->
 	erlang:send_after(?Timer, self(), timer),
 
 	wxPanel:connect(Panel, paint, [callback]),
-	wxButton:connect(Button, command_button_clicked),
+	wxButton:connect(ButtonStart, command_button_clicked),
+	wxButton:connect(ButtonJump, command_button_clicked),
 
 	%timer:sleep(5000),
 
@@ -63,25 +73,41 @@ init(_Args) ->
 				frame = Frame,
 				panel = Panel,
 				bitmapBG = BitmapBG,
-				bitmapBird = BitmapBird}}
+				bitmapBird = BitmapBird,
+				bird_list = []}}
 .
 
-handle_event(Request, State) ->
-	io:format("Started! request: ~p", [Request]),
+%% We reach here each button press
+handle_event(#wx{id =ID, event = #wxCommand{type = command_button_clicked}}, State) ->
+	case ID of
+		?ButtonStartID -> init_system();
+		?ButtonJumpID -> todo
+	end,
 	{noreply, State}.
 
+%% We reach here each timer event
 handle_info(timer, State = #graphics_state{frame = Frame}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	erlang:send_after(?Timer, self(), timer),
-	io:format("handle_info~n"),
 	{noreply, State}.
 
-handle_sync_event(Event, _, _State = #graphics_state{panel = Panel, bitmapBG = BitmapBG, bitmapBird = BitmapBird}) ->
+handle_sync_event(_Event, _, _State = #graphics_state{panel = Panel, bitmapBG = BitmapBG, bitmapBird = BitmapBird}) ->
 	DC2 = wxPaintDC:new(Panel),
 	wxDC:clear(DC2),
 	wxDC:drawBitmap(DC2, BitmapBG, {0,0}),
 	wxDC:drawBitmap(DC2, BitmapBird, {220,400}),
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
-	io:format("handle_sync_event~n Event: ~p~n~n", [Event]),
 	wxPaintDC:destroy(DC2).
+
+%% ==============================
+init_system() ->
+	X = 220,
+	Y = 400,
+	VelocityY = ?JUMP_SPEED,
+	Direction = right,
+	simulate_bird(#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}).
+
+simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) ->
+	todo,
+	Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}.
