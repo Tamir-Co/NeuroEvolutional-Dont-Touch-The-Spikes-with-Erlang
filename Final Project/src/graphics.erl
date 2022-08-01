@@ -17,13 +17,13 @@
 
 -define(SERVER, ?MODULE).
 
--define(JUMP_SPEED, 5).
+-define(JUMP_VELOCITY, 5).
 
 -define(ButtonStartID, 10).
 -define(ButtonJumpID, 11).
 
--define(BG_WIDTH, 500).
--define(BG_HEIGHT, 1000).
+-define(BG_WIDTH, 400).
+-define(BG_HEIGHT, 700).
 
 -define(Timer, 100).	% Graphics Update Timer, default: 60
 
@@ -78,7 +78,7 @@ init(_Args) ->
 .
 
 %% We reach here each button press
-handle_event(#wx{id =ID, event = #wxCommand{type = command_button_clicked}}, State) ->
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State) ->
 	case ID of
 		?ButtonStartID -> init_system();
 		?ButtonJumpID -> todo
@@ -86,7 +86,7 @@ handle_event(#wx{id =ID, event = #wxCommand{type = command_button_clicked}}, Sta
 	{noreply, State}.
 
 %% We reach here each timer event
-handle_info(timer, State = #graphics_state{frame = Frame}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{frame=Frame}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	erlang:send_after(?Timer, self(), timer),
 	{noreply, State}.
@@ -104,7 +104,7 @@ handle_sync_event(_Event, _, _State = #graphics_state{panel = Panel, bitmapBG = 
 init_system() ->
 	X = 220,
 	Y = 400,
-	VelocityY = ?JUMP_SPEED,
+	VelocityY = ?JUMP_VELOCITY,
 	Direction = right,
 	simulate_bird(#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}).
 
