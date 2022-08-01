@@ -1,5 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% @author nadavhd
+%%% @author Nadav & Tamir
 %%% @copyright (C) 2022, <COMPANY>
 %%% @doc
 %%%
@@ -7,31 +7,17 @@
 %%% Created : 28. Jul 2022 19:01
 %%%-------------------------------------------------------------------
 -module(graphics).
--author("nadavhd").
+-author("Nadav & Tamir").
 
 %% API
+-include("constants.hrl").
 -include_lib("wx/include/wx.hrl").
 -behaviour(wx_object).
+
 -export([start/0]).
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2]).
 
 -define(SERVER, ?MODULE).
-
--define(JUMP_VELOCITY, 5).
--define(BIRD_START_X, 180).
--define(BIRD_START_Y, 320).
-
--define(ButtonStartID, 10).
--define(ButtonJumpID, 11).
-
--define(BG_WIDTH, 400).
--define(BG_HEIGHT, 700).
-
--define(Timer, 100).	% Graphics Update Timer, default: 60
-
-%% GRAPHICS RECORDS %%
--record(graphics_state, {frame, panel, bitmapBG, bitmapBird, bird_list}).
--record(bird, {x, y, velocityY, direction}).
 
 start() ->
 	wx_object:start({local,?SERVER},?MODULE,[],[]).
