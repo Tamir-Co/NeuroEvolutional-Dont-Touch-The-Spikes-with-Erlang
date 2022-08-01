@@ -9,7 +9,7 @@
 -author("Nadav & Tamir").
 
 
--define(JUMP_VELOCITY, 5).
+-define(JUMP_VELOCITY, 10).
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
@@ -20,7 +20,8 @@
 -define(BG_HEIGHT, 700).
 
 -define(Timer, 100).		% Graphics update timer
+-define(TIME_UNIT, 1).
 
 %% RECORDS %%
--record(graphics_state, {frame, panel, bitmapBG, bitmapBird, bird_list}).
+-record(graphics_state, {frame, panel, bitmapBG, bitmapBird, bird}).
 -record(bird, {x, y, velocityY, direction}).
