@@ -19,12 +19,14 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(ButtonStartID, 10).
--define(ButtonJumpID, 11).
+-define(ButtonStartUserID, 10).
+-define(ButtonStartNEATID, 11).
+-define(ButtonJumpID, 12).
 
 -define(Timer, 100).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
 %% RECORDS %%
--record(graphics_state, {frame, panel, bitmapBG, bitmapBird, bird}).
+-record(graphics_state, {frame, panel, bitmapBG, bitmapBird, bird, curr_state}).
+%graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 -record(bird, {x, y, velocityY, direction}).
