@@ -18,6 +18,8 @@
 -define(SERVER, ?MODULE).
 
 -define(JUMP_VELOCITY, 5).
+-define(BIRD_START_X, 180).
+-define(BIRD_START_Y, 320).
 
 -define(ButtonStartID, 10).
 -define(ButtonJumpID, 11).
@@ -95,15 +97,15 @@ handle_sync_event(_Event, _, _State = #graphics_state{panel = Panel, bitmapBG = 
 	DC2 = wxPaintDC:new(Panel),
 	wxDC:clear(DC2),
 	wxDC:drawBitmap(DC2, BitmapBG, {0,0}),
-	wxDC:drawBitmap(DC2, BitmapBird, {220,400}),
+	wxDC:drawBitmap(DC2, BitmapBird, {?BIRD_START_X, ?BIRD_START_Y}),
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
 	wxPaintDC:destroy(DC2).
 
 %% ==============================
 init_system() ->
-	X = 220,
-	Y = 400,
+	X = ?BIRD_START_X,
+	Y = ?BIRD_START_Y,
 	VelocityY = ?JUMP_VELOCITY,
 	Direction = right,
 	simulate_bird(#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}).
