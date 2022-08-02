@@ -27,7 +27,7 @@ callback_mode() ->
 
 % Init bird location to center
 init_bird(PC_PID) ->
-	#bird{x=?BIRD_START_X, y=?BIRD_START_Y, velocityY=-?JUMP_VELOCITY, direction=right, pc_pid=PC_PID}.
+	#bird{x=?BIRD_START_X, y=?BIRD_START_Y, velocityY=0, direction=right, pc_pid=PC_PID}.
 
 simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) ->
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
@@ -39,8 +39,5 @@ simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) 
 	todo,
 	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
 
-% jump(Bird = #bird{x=X, y=Y, velocityY=_VelocityY, direction=Direction}) ->
 jump(Bird=#bird{}) ->
-	% Bird#bird{x=X, y=Y-?JUMP_VELOCITY*?TIME_UNIT, velocityY=-?JUMP_VELOCITY, direction=Direction}
-	Bird#bird{velocityY=-?JUMP_VELOCITY}
-.
+	Bird#bird{velocityY=-?JUMP_VELOCITY}.
