@@ -42,5 +42,5 @@ simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) 
 % jump(Bird = #bird{x=X, y=Y, velocityY=_VelocityY, direction=Direction}) ->
 jump(Bird=#bird{}) ->
 	% Bird#bird{x=X, y=Y-?JUMP_VELOCITY*?TIME_UNIT, velocityY=-?JUMP_VELOCITY, direction=Direction}
-	Bird#bird{velocityY=}
+	Bird#bird{velocityY=-?JUMP_VELOCITY}
 .
