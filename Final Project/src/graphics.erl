@@ -43,8 +43,10 @@ init(_Args) ->
 	BitmapBG = wxBitmap:new(wxImage:scale(ImageBG, ?BG_WIDTH, ?BG_HEIGHT, [{quality, ?wxIMAGE_QUALITY_HIGH}])),
 %%	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
 
-	ImageBird = wxImage:new("images/bird.png", []),
-	BitmapBird = wxBitmap:new(wxImage:scale(ImageBird, 50, 50, [])),
+	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
+	ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
+	BitmapBird_R = wxBitmap:new(wxImage:scale(ImageBird_R, ?BIRD_WIDTH, 50, [])),
+	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, 50, [])),
 %%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
 
 	wxPanel:setSizer(Frame, MainSizer),
@@ -70,7 +72,8 @@ init(_Args) ->
 				frame = Frame,
 				panel = Panel,
 				bitmapBG = BitmapBG,
-				bitmapBird = BitmapBird,
+				bitmapBird_R = BitmapBird_R,
+				bitmapBird_L = BitmapBird_L,
 				bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction},
 				curr_state = idle}}
 .
@@ -85,11 +88,11 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 	{noreply, NewState}.
 
 %% We reach here each timer event
-handle_info(timer, State = #graphics_state{frame=Frame, bird=Bird=#bird{x=X, y=Y, velocityY=VelocityY}, curr_state=CurrState}) ->  % refresh screen for graphics
-	wxWindow:refresh(Frame), % refresh screen
+handle_info(timer, State = #graphics_state{frame=Frame, bird=Bird, curr_state=CurrState}) ->  % refresh screen for graphics
+	wxWindow:refresh(Frame), % refresh screen				^ =#bird{x=X, y=Y, velocityY=VelocityY}
 
 	if CurrState == play_user ->		% Bird is falling only when state is user
-			NewState = State#graphics_state{bird=Bird#bird{x=X, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+1}};
+			NewState = State#graphics_state{bird=simulate_bird(Bird)};
 		true ->
 			NewState = State
 	end,
@@ -97,27 +100,63 @@ handle_info(timer, State = #graphics_state{frame=Frame, bird=Bird=#bird{x=X, y=Y
 	erlang:send_after(?Timer, self(), timer),	% set new timer
 	{noreply, NewState}.
 
-handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird=BitmapBird, bird=_Bird=#bird{x=X, y=Y}}) ->
+handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=_Bird=#bird{x=X, y=Y, direction=Direction}}) ->
 	DC2 = wxPaintDC:new(Panel),
 	wxDC:clear(DC2),
 	wxDC:drawBitmap(DC2, BitmapBG, {0, 0}),
-	wxDC:drawBitmap(DC2, BitmapBird, {X, Y}),
+	case Direction of
+		right -> wxDC:drawBitmap(DC2, BitmapBird_R, {X, Y});
+		left  -> wxDC:drawBitmap(DC2, BitmapBird_L, {X, Y})
+	end,
+	
+	% Pen = ,
+	wxDC:setPen(DC2, wxPen:new({128,128,128}, [{style, 100}])),
+	% Brush = ,
+	wxDC:setBrush(DC2, wxBrush:new({128,128,128}, [{style, 100}])),
+	% SpikeProb = 50,
+	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
+	
+	% SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb  of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+	SpikesList = [1,1,1,1,1,1,0,0,0,1],
+	% wxDC:drawPolygon(DC2, [{0, 100}, {0, 130}, {25, 115}]),
+	draw_spikes(DC2, SpikesList, 100),
+
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
 	wxPaintDC:destroy(DC2).
+
+draw_spikes(_, [], _) -> ok;
+draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
+	case IsSpike of
+		1 -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {25, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}]);
+		0 -> no_spike
+	end,
+	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP).
 
 %% ==============================
 init_system() ->
 	X = ?BIRD_START_X,
 	Y = ?BIRD_START_Y,
-	VelocityY = 0,
+	VelocityY = -?JUMP_VELOCITY,	% initialize the bird to jump when the game starts.
 	Direction = right,
-	simulate_bird(#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}).
+	% Bird = 
+	#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}
+	% ,simulate_bird(Bird)
+	.
 
 simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) ->
+	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
+		{right, _    , true } -> NewDirection = left     , NewX = X - ?X_VELOCITY;
+		{right, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
+		{left , true , _    } -> NewDirection = right    , NewX = X + ?X_VELOCITY;
+		{left , false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
+	end,
 	todo,
-	Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}.
+	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
 
-jump(Bird = #bird{x=X, y=Y, velocityY=_VelocityY, direction=Direction}) ->
-	Bird#bird{x=X, y=Y-?JUMP_VELOCITY*?TIME_UNIT, velocityY=-?JUMP_VELOCITY, direction=Direction}
+% jump(Bird = #bird{x=X, y=Y, velocityY=_VelocityY, direction=Direction}) ->
+jump(Bird=#bird{}) ->
+	% Bird#bird{x=X, y=Y-?JUMP_VELOCITY*?TIME_UNIT, velocityY=-?JUMP_VELOCITY, direction=Direction}
+	Bird#bird{velocityY=-?JUMP_VELOCITY}
 	.
