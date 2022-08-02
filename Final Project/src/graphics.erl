@@ -119,7 +119,6 @@ handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=Bitm
 	
 	% SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb  of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 	SpikesList = [1,1,1,1,1,1,0,0,0,1],
-	% wxDC:drawPolygon(DC2, [{0, 100}, {0, 130}, {25, 115}]),
 	draw_spikes(DC2, SpikesList, 100),
 
 %%	wxBitmap:destroy(BitmapBird),

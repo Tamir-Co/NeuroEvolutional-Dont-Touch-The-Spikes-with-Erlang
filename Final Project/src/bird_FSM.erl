@@ -14,17 +14,25 @@
 %% API
 -export([init/1, callback_mode/0]).
 
+% =========================================
 %% Creates a gen_statem process which calls bird_FSM:init/1
 start_bird_FSM(Name,PC_PID) ->
 	gen_statem:start({local,Name}, ?MODULE, [PC_PID], []).
 
+% =========================================
 init(PC_PID) ->
 	{ok, idle, init_bird(PC_PID)}.
 
 callback_mode() ->
 	state_functions.
 
+% =========================================
+idle(enter, _OldState, BirdData=#bird{}) ->
+	init_bird().
+idle(cast, {init_bird, }, BirdData=#bird{}) ->
+	.
 
+% =========================================
 % Init bird location to center
 init_bird(PC_PID) ->
 	#bird{x=?BIRD_START_X, y=?BIRD_START_Y, velocityY=0, direction=right, pc_pid=PC_PID}.
