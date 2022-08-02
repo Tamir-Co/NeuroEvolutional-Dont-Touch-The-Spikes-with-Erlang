@@ -21,6 +21,8 @@
 -define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-100).
 
 -define(BIRD_WIDTH, 50).
+-define(BIRD_HEIGHT, 34).
+
 -define(JUMP_VELOCITY, 15).
 -define(X_VELOCITY, 5).
 -define(BIRD_START_X, 180).
@@ -33,7 +35,24 @@
 -define(Timer, 60).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
+
 %% RECORDS %%
--record(graphics_state, {frame, panel, bitmapBG, bitmapBird_R, bitmapBird_L, bird, curr_state}).
+-record(graphics_state, {
+		frame,
+		panel,
+		bitmapBG,
+		bitmapBird_R,
+		bitmapBird_L,
+		bird,	% TODO change to birdList
+		birdPID,
+		curr_state
+}).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
--record(bird, {x, y, velocityY, direction, pc_pid}).
+
+-record(bird, {
+		x = ?BIRD_START_X,
+		y = ?BIRD_START_Y,
+		velocityY = 0,
+		direction = right,
+		pc_pid
+}).

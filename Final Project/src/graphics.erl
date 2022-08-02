@@ -44,9 +44,10 @@ init(_Args) ->
 %%	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
 
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
-	ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
-	BitmapBird_R = wxBitmap:new(wxImage:scale(ImageBird_R, ?BIRD_WIDTH, 50, [])),
-	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, 50, [])),
+	% ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
+	ImageBird_L = wxImage:mirror(ImageBird_R),
+	BitmapBird_R = wxBitmap:new(wxImage:scale(ImageBird_R, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
+	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 %%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
 
 	wxPanel:setSizer(Frame, MainSizer),
@@ -68,31 +69,29 @@ init(_Args) ->
 				bitmapBG = BitmapBG,
 				bitmapBird_R = BitmapBird_R,
 				bitmapBird_L = BitmapBird_L,
-				bird = init_bird(),
-				curr_state = idle}}
-.
+				bird = #bird{},
+				curr_state = idle}}.
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{bird=Bird}) ->
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{curr_state=CurrState, bird=Bird}) ->
 	NewState = case ID of
-		?ButtonStartUserID -> init_system(), State#graphics_state{curr_state=play_user};
-		?ButtonStartNEATID -> init_system(), State#graphics_state{curr_state=play_NEAT};
-		?ButtonJumpID -> State#graphics_state{bird=jump(Bird)}
+		?ButtonStartUserID -> BirdPID = init_system(),
+							  gen_statem:cast(BirdPID, {start_simulation}),
+							  State#graphics_state{curr_state=play_user, birdPID=BirdPID};
+		
+		?ButtonStartNEATID -> BirdPID = init_system(),
+							  State#graphics_state{curr_state=play_NEAT, birdPID=BirdPID};	% TODO change PID
+		
+		?ButtonJumpID	   -> gen_statem:cast(BirdPID, {jump})
 	end,
 	{noreply, NewState}.
 
 %% We reach here each timer event
-handle_info(timer, State = #graphics_state{frame=Frame, bird=Bird, curr_state=CurrState}) ->  % refresh screen for graphics
-	wxWindow:refresh(Frame), % refresh screen				^ =#bird{x=X, y=Y, velocityY=VelocityY}
+handle_info(timer, State=#graphics_state{frame=Frame, bird=Bird, birdPID=BirdPID, curr_state=CurrState}) ->  % refresh screen for graphics
+	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = if 	CurrState == play_user ->		% Bird is falling only when state is user
-						NewBird = simulate_bird(Bird),
-						if 	NewBird#bird.y >= ?SPIKES_BOTTOM_Y orelse NewBird#bird.y =< ?SPIKES_TOP_Y ->	% bird touching top/bottom spikes
-								io:format("~nGame Over!~n"),
-								State#graphics_state{bird=init_bird(), curr_state=idle};
-							true ->
-								State#graphics_state{bird=NewBird}
-						end;
+						gen_statem:cast(BirdPID, {simulate_frame});
 					true ->
 						State
 				end,
@@ -101,29 +100,27 @@ handle_info(timer, State = #graphics_state{frame=Frame, bird=Bird, curr_state=Cu
 	{noreply, NewState}.
 
 handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=_Bird=#bird{x=X, y=Y, direction=Direction}}) ->
-	DC2 = wxPaintDC:new(Panel),
-	wxDC:clear(DC2),
-	wxDC:drawBitmap(DC2, BitmapBG, {0, 0}),
+	DC = wxPaintDC:new(Panel),
+	wxDC:clear(DC),
+	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	case Direction of
-		right -> wxDC:drawBitmap(DC2, BitmapBird_R, {X, Y});
-		left  -> wxDC:drawBitmap(DC2, BitmapBird_L, {X, Y})
+		right -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
+		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
 	
-	% Pen = ,
-	wxDC:setPen(DC2, wxPen:new({128,128,128}, [{style, 100}])),
-	% Brush = ,
-	wxDC:setBrush(DC2, wxBrush:new({128,128,128}, [{style, 100}])),
+	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
+	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),
 	% SpikeProb = 50,
 	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
 	
 	% SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb  of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 	SpikesList = [1,1,1,1,1,1,0,0,0,1],
-	draw_spikes(DC2, SpikesList, 100),
+	draw_spikes(DC, SpikesList, 100),
 
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
-	wxPaintDC:destroy(DC2).
+	wxPaintDC:destroy(DC).
 
 draw_spikes(_, [], _) -> ok;
 draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
@@ -135,5 +132,6 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 
 %% ==============================
 init_system() ->
-	bird_FSM:start_bird_FSM(bird_FSM, )
-	.
+	{ok, BirdPID} = bird_FSM:start_bird_FSM(bird_FSM, self()),	% TODO pc_server_pid instead of self()
+	BirdPID.
+
