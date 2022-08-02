@@ -136,29 +136,5 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 
 %% ==============================
 init_system() ->
-	init_bird()
-	.
-
-% Init bird location to center
-init_bird() ->
-	X = ?BIRD_START_X,
-	Y = ?BIRD_START_Y,
-	VelocityY = 0,
-	Direction = right,
-	#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}.
-
-simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) ->
-	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{right, _    , true } -> NewDirection = left     , NewX = X - ?X_VELOCITY;
-		{right, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
-		{left , true , _    } -> NewDirection = right    , NewX = X + ?X_VELOCITY;
-		{left , false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
-	end,
-	todo,
-	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
-
-% jump(Bird = #bird{x=X, y=Y, velocityY=_VelocityY, direction=Direction}) ->
-jump(Bird=#bird{}) ->
-	% Bird#bird{x=X, y=Y-?JUMP_VELOCITY*?TIME_UNIT, velocityY=-?JUMP_VELOCITY, direction=Direction}
-	Bird#bird{velocityY=-?JUMP_VELOCITY}
+	bird_FSM:start_bird_FSM(bird_FSM, )
 	.
