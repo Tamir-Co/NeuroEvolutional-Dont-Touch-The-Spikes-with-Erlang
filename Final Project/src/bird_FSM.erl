@@ -12,11 +12,13 @@
 -include("constants.hrl").
 
 %% API
+-export([start_bird_FSM/2]).
 -export([init/1, callback_mode/0]).
+-export([idle/3, simulation/3]).
 
 % =========================================
 %% Creates a gen_statem process which calls bird_FSM:init/1
-start_bird_FSM(Name,PC_PID) ->
+start_bird_FSM(Name, PC_PID) ->
 	gen_statem:start({local,Name}, ?MODULE, [PC_PID], []).
 
 % =========================================
@@ -58,6 +60,6 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 								% to idle
 							true ->
 								ok
-						end;
+						end,
 	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
 

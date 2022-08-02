@@ -73,7 +73,7 @@ init(_Args) ->
 				curr_state = idle}}.
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{curr_state=CurrState, bird=Bird}) ->
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{}) ->%curr_state=CurrState, 
 	NewState = case ID of
 		?ButtonStartUserID -> BirdPID = init_system(),
 							  gen_statem:cast(BirdPID, {start_simulation}),
@@ -82,12 +82,13 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 		?ButtonStartNEATID -> BirdPID = init_system(),
 							  State#graphics_state{curr_state=play_NEAT, birdPID=BirdPID};	% TODO change PID
 		
-		?ButtonJumpID	   -> gen_statem:cast(BirdPID, {jump})
+		?ButtonJumpID	   -> #graphics_state{birdPID=BirdPID} = State,
+							  gen_statem:cast(BirdPID, {jump})
 	end,
 	{noreply, NewState}.
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{frame=Frame, bird=Bird, birdPID=BirdPID, curr_state=CurrState}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_state=CurrState}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = if 	CurrState == play_user ->		% Bird is falling only when state is user
@@ -99,7 +100,7 @@ handle_info(timer, State=#graphics_state{frame=Frame, bird=Bird, birdPID=BirdPID
 	erlang:send_after(?Timer, self(), timer),	% set new timer
 	{noreply, NewState}.
 
-handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=_Bird=#bird{x=X, y=Y, direction=Direction}}) ->
+handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
 	DC = wxPaintDC:new(Panel),
 	wxDC:clear(DC),
 	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
