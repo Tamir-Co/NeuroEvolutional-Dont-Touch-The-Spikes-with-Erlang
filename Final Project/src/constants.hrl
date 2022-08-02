@@ -36,4 +36,4 @@
 %% RECORDS %%
 -record(graphics_state, {frame, panel, bitmapBG, bitmapBird_R, bitmapBird_L, bird, curr_state}).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
--record(bird, {x, y, velocityY, direction}).
+-record(bird, {x, y, velocityY, direction, pc_pid}).
