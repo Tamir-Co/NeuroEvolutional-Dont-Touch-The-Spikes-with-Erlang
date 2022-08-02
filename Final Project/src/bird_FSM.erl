@@ -27,9 +27,9 @@ callback_mode() ->
 
 % Init bird location to center
 init_bird(PC_PID) ->
-	#bird{x=?BIRD_START_X, y=?BIRD_START_Y, velocityY=VelocityY, direction=right, pc_pid=PC_PID}.
+	#bird{x=?BIRD_START_X, y=?BIRD_START_Y, velocityY=-?JUMP_VELOCITY, direction=right, pc_pid=PC_PID}.
 
-simulate_bird(Bird = #bird{x=X, y=Y, velocityY=-?JUMP_VELOCITY, direction=Direction}) ->
+simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) ->
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
 		{right, _    , true } -> NewDirection = left     , NewX = X - ?X_VELOCITY;
 		{right, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
