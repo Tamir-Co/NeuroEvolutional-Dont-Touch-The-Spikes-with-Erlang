@@ -17,6 +17,8 @@
 -define(SPIKE_HALF_WIDTH, 18).
 -define(SPIKE_LENGTH, 30).
 -define(SPIKE_GAP, 13).
+-define(SPIKES_TOP_Y, 100).
+-define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-100).
 
 -define(BIRD_WIDTH, 50).
 -define(JUMP_VELOCITY, 15).

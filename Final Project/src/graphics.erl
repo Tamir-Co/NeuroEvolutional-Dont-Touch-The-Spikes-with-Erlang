@@ -62,19 +62,13 @@ init(_Args) ->
 
 	%timer:sleep(5000),
 
-	%% Bird init
-	X = ?BIRD_START_X,
-	Y = ?BIRD_START_Y,
-	VelocityY = 0,
-	Direction = right,
-
 	{Frame, #graphics_state{
 				frame = Frame,
 				panel = Panel,
 				bitmapBG = BitmapBG,
 				bitmapBird_R = BitmapBird_R,
 				bitmapBird_L = BitmapBird_L,
-				bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction},
+				bird = init_bird(),
 				curr_state = idle}}
 .
 
@@ -91,11 +85,17 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 handle_info(timer, State = #graphics_state{frame=Frame, bird=Bird, curr_state=CurrState}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen				^ =#bird{x=X, y=Y, velocityY=VelocityY}
 
-	if CurrState == play_user ->		% Bird is falling only when state is user
-			NewState = State#graphics_state{bird=simulate_bird(Bird)};
-		true ->
-			NewState = State
-	end,
+	NewState = if 	CurrState == play_user ->		% Bird is falling only when state is user
+						NewBird = simulate_bird(Bird),
+						if 	NewBird#bird.y >= ?SPIKES_BOTTOM_Y orelse NewBird#bird.y =< ?SPIKES_TOP_Y ->	% bird touching top/bottom spikes
+								io:format("~nGame Over!~n"),
+								State#graphics_state{bird=init_bird(), curr_state=idle};
+							true ->
+								State#graphics_state{bird=NewBird}
+						end;
+					true ->
+						State
+				end,
 
 	erlang:send_after(?Timer, self(), timer),	% set new timer
 	{noreply, NewState}.
@@ -136,14 +136,16 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 
 %% ==============================
 init_system() ->
+	init_bird()
+	.
+
+% Init bird location to center
+init_bird() ->
 	X = ?BIRD_START_X,
 	Y = ?BIRD_START_Y,
-	VelocityY = -?JUMP_VELOCITY,	% initialize the bird to jump when the game starts.
+	VelocityY = 0,
 	Direction = right,
-	% Bird = 
-	#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}
-	% ,simulate_bird(Bird)
-	.
+	#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}.
 
 simulate_bird(Bird = #bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}) ->
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
