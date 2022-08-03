@@ -40,7 +40,8 @@
 
 %% RECORDS %%
 -record(pc_bird_server_state, {
-	name,
+	pcName,
+	curr_state = idle,
 	birdList
 }).
 

@@ -22,7 +22,8 @@ start_bird_FSM(Name, PC_PID) ->
 	gen_statem:start_link({local,Name}, ?MODULE, [PC_PID], []).
 
 % =========================================
-init(PC_PID) ->
+init([PC_PID]) ->
+	io:format("PC_PID: ~p", [PC_PID]),
 	{ok, idle, #bird{pc_pid=PC_PID}}.	% Init bird location to center
 
 callback_mode() ->
@@ -35,15 +36,15 @@ idle(info, {start_simulation}, Bird=#bird{}) ->
 	{next_state, simulation, Bird}.
 
 % =========================================
-simulation(cast, {jump}, Bird=#bird{}) ->
+simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID}) ->
 	NextBird = simulate_next_frame_bird(jump(Bird)),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
-	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
+	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird};
-simulation(cast, {simulate_frame}, Bird=#bird{}) ->
+simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID}) ->
 	NextBird = simulate_next_frame_bird(Bird),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
-	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
+	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird}.
 %%
 %%simulation(info, {jump}, Bird=#bird{}) ->

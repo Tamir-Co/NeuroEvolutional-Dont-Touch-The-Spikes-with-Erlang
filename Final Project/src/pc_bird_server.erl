@@ -16,13 +16,14 @@
 -export([init/1, handle_call/3, handle_cast/2]).
 
 %% ====================================
-start(Name) ->
-	gen_server:start({local, Name}, ?MODULE, [Name], []).
+start(PC_Name) ->
+	gen_server:start({local, PC_Name}, ?MODULE, [PC_Name], []).
 
 %% ====================================
-init([Name]) ->
+init([PC_Name]) ->
 	{ok, #pc_bird_server_state{
-			name = Name,
+			pcName = PC_Name,
+			curr_state = idle,
 			birdList = []
 	}}.
 
@@ -32,17 +33,31 @@ create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Nam
 handle_call(_Request, _From, _State) ->
 	erlang:error(not_implemented).
 
-handle_cast({start_bird_FSM, 0}, State) ->
+handle_cast({start_bird_FSM, 0}, State=#pc_bird_server_state{pcName = PC_Name}) ->
+	wx_object:cast(graphics, {finish_init_birds, PC_Name}),		% tell graphics the PC finished to all start_bird_FSMs
 	{noreply, State};
-handle_cast({start_bird_FSM, NumOfBirds}, State=#pc_bird_server_state{name = Name, birdList = BirdList}) ->
-	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(Name), self()),
-	BirdPID ! {start_simulation},
+handle_cast({start_bird_FSM, NumOfBirds}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
+	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(PC_Name), self()),
 	handle_cast({start_bird_FSM, NumOfBirds-1}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
+
+handle_cast({start_simulation}, State=#pc_bird_server_state{birdList = BirdList}) ->
+	msg_all_birds(BirdList, {start_simulation}),
+	{noreply, State};
+
 handle_cast({jump}, State=#pc_bird_server_state{birdList = BirdList}) ->
 	gen_statem:cast(hd(BirdList), {jump}),
 	{noreply, State};
+
 handle_cast({simulate_frame}, State=#pc_bird_server_state{birdList = BirdList}) ->
 	gen_statem:cast(hd(BirdList), {simulate_frame}),
+	{noreply, State};
+
+handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
+	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
 	{noreply, State}.
 %% ====================================
+msg_all_birds([], _Msg) -> done;
+msg_all_birds([Bird|Bird_T], Msg) ->
+	Bird ! Msg,
+	msg_all_birds(Bird_T, Msg).
 

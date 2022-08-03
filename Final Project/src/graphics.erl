@@ -69,6 +69,7 @@ init(_Args) ->
 	wxButton:connect(ButtonJump, command_button_clicked),
 
 	%timer:sleep(5000),
+	BirdServerPID = init_system(),		% Init bird servers and split the work
 
 	{Frame, #graphics_state{
 				frame = Frame,
@@ -80,7 +81,7 @@ init(_Args) ->
 				bitmapBird_L = BitmapBird_L,
 				bird = #bird{},
 				curr_state = idle,
-				pcList = []
+				pcList = [BirdServerPID]
 	}}.
 
 
@@ -88,20 +89,26 @@ init(_Args) ->
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
 	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
 	NewState = State#graphics_state{bird=NewBird},
-	{noreply, NewState}.
+	{noreply, NewState};
+
+handle_cast({finish_init_birds, _PC_Name}, State=#graphics_state{curr_state = CurrState, pcList = PC_List})->
+	case CurrState of
+		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
+		play_NEAT -> todo
+	end,
+	{noreply, State}.
 
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer, pcList = PC_List}) ->
 %%	io:format("a "),
 	NewState = case ID of
 		?ButtonStartUserID -> wxSizer:show(MainSizer, JumpSizer, []),
-							  BirdServerPID = init_system(),		% Init bird servers and split the work
 							  % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
 							  % cast pc to init FSM
 							  NumOfBirds = 1,
-							  gen_server:cast(BirdServerPID, {start_bird_FSM, NumOfBirds}),
-							  State#graphics_state{curr_state=play_user, pcList = PC_List ++ [BirdServerPID]};
+							  gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds}),
+							  State#graphics_state{curr_state=play_user};
 		
 		?ButtonStartNEATID -> _BirdPID = init_system(),
 							  State#graphics_state{curr_state=play_NEAT};	% TODO change PID!
