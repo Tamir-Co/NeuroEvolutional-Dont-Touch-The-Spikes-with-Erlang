@@ -16,7 +16,7 @@
 
 -export([start/0]).
 -export([init_system/0]).% delete
--export([init/1, handle_event/2, handle_sync_event/3, handle_info/2]).
+-export([init/1, handle_event/2, handle_sync_event/3, handle_info/2, handle_cast/2]).
 
 -define(SERVER, ?MODULE).
 
@@ -24,6 +24,7 @@ start() ->
 	wx_object:start({local,?SERVER},?MODULE,[],[]).
 
 init(_Args) ->
+	process_flag(trap_exit, true),
 	WxServer = wx:new(),
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
 	Panel  = wxPanel:new(Frame,[{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
@@ -81,6 +82,13 @@ init(_Args) ->
 				bird = #bird{},
 				curr_state = idle}}.
 
+
+% the location of the bird
+handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
+	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
+	NewState = State#graphics_state{bird=NewBird},
+	{noreply, NewState}.
+
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer}) ->%curr_state=CurrState,
 %%	io:format("a "),
@@ -121,7 +129,10 @@ handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_stat
 				end,
 
 	erlang:send_after(?Timer, self(), timer),	% set new timer
-	{noreply, NewState}.
+	{noreply, NewState};
+
+handle_info(#wx{event=#wxClose{}}, State) ->
+	{stop, normal, State}.
 
 handle_sync_event(_Event, _, _State=#graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
 %%	io:format("c "),
@@ -148,6 +159,9 @@ handle_sync_event(_Event, _, _State=#graphics_state{panel=Panel, bitmapBG=Bitmap
 	wxPaintDC:destroy(DC);
 handle_sync_event(_Event, _, State) ->
 	{noreply, State}.
+%%
+%%terminate(_Reason, State = #graphics_state{}) ->
+%%	wxFrame:destroy(State#graphics_state.frame).
 
 draw_spikes(_, [], _) -> ok;
 draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
@@ -158,7 +172,10 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP).
 
 %% ==============================
+% build a new & unique bird FSM
+create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
+
 init_system() ->
-	{ok, BirdPID} = bird_FSM:start_bird_FSM(bird_FSM, self()),	% TODO pc_server_pid instead of self()
+	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(graphics), self()),	% TODO pc_server_pid instead of self()
 	BirdPID.
 
