@@ -31,13 +31,19 @@ callback_mode() ->
 % =========================================
 % idle(enter, _OldState, Bird=#bird{}) ->
 	% {keep_state, #bird{}}.
-idle(cast, {start_simulation}, Bird=#bird{}) ->
+idle(info, {start_simulation}, Bird=#bird{}) ->
 	{next_state, simulation, Bird}.
 
 % =========================================
 simulation(cast, {jump}, Bird=#bird{}) ->
 	{keep_state, jump(Bird)};
 simulation(cast, {simulate_frame}, Bird=#bird{}) ->
+	simulate_next_frame_bird(Bird),
+	{keep_state, Bird};
+
+simulation(info, {jump}, Bird=#bird{}) ->
+	{keep_state, jump(Bird)};
+simulation(info, {simulate_frame}, Bird=#bird{}) ->
 	simulate_next_frame_bird(Bird),
 	{keep_state, Bird}.
 

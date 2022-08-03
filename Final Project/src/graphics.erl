@@ -15,6 +15,7 @@
 -behaviour(wx_object).
 
 -export([start/0]).
+-export([init_system/0]).% delete
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2]).
 
 -define(SERVER, ?MODULE).
@@ -74,9 +75,11 @@ init(_Args) ->
 
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{}) ->%curr_state=CurrState, 
+	io:format("a "),
 	NewState = case ID of
 		?ButtonStartUserID -> BirdPID = init_system(),
-							  gen_statem:cast(BirdPID, {start_simulation}),
+							  % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
+							  BirdPID ! {start_simulation},io:format("TAAMIRrr "),
 							  State#graphics_state{curr_state=play_user, birdPID=BirdPID};
 		
 		?ButtonStartNEATID -> BirdPID = init_system(),
@@ -89,10 +92,12 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_state=CurrState}) ->  % refresh screen for graphics
+	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = if 	CurrState == play_user ->		% Bird is falling only when state is user
-						gen_statem:cast(BirdPID, {simulate_frame});
+						gen_statem:cast(BirdPID, {simulate_frame}),
+						State;
 					true ->
 						State
 				end,
@@ -100,7 +105,8 @@ handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_stat
 	erlang:send_after(?Timer, self(), timer),	% set new timer
 	{noreply, NewState}.
 
-handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
+handle_sync_event(_Event, _, _State=#graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
+	io:format("c "),
 	DC = wxPaintDC:new(Panel),
 	wxDC:clear(DC),
 	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
@@ -121,7 +127,9 @@ handle_sync_event(_Event, _, _State = #graphics_state{panel=Panel, bitmapBG=Bitm
 
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
-	wxPaintDC:destroy(DC).
+	wxPaintDC:destroy(DC);
+handle_sync_event(_Event, _, State) ->
+	{noreply, State}.
 
 draw_spikes(_, [], _) -> ok;
 draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
