@@ -104,7 +104,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 							  State#graphics_state{curr_state=play_user, pcList = PC_List ++ [BirdServerPID]};
 		
 		?ButtonStartNEATID -> _BirdPID = init_system(),
-							  State#graphics_state{curr_state=play_NEAT};	% TODO change PID
+							  State#graphics_state{curr_state=play_NEAT};	% TODO change PID!
 
 		?ButtonJumpID	   -> gen_server:cast(hd(PC_List), {jump}),
 			 				  State
