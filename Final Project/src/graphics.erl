@@ -91,7 +91,7 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})-
 	{noreply, NewState}.
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer, pcList = PC_List}) ->%curr_state=CurrState,
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer, pcList = PC_List}) ->
 %%	io:format("a "),
 	NewState = case ID of
 		?ButtonStartUserID -> wxSizer:show(MainSizer, JumpSizer, []),
