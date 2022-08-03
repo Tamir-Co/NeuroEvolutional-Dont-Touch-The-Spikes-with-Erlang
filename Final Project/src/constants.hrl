@@ -35,8 +35,15 @@
 -define(Timer, 60).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
+-define(NUM_OF_BIRDS, 1000).
+
 
 %% RECORDS %%
+-record(pc_bird_server_state, {
+	name,
+	birdList
+}).
+
 -record(graphics_state, {
 		frame,
 		panel,
@@ -46,8 +53,8 @@
 		bitmapBird_R,
 		bitmapBird_L,
 		bird,	% TODO change to birdList
-		birdPID,
-		curr_state
+		curr_state,
+		pcList
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 

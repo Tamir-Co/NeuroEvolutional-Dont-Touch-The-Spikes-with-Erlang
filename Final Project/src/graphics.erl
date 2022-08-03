@@ -15,7 +15,6 @@
 -behaviour(wx_object).
 
 -export([start/0]).
--export([init_system/0]).% delete
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2, handle_cast/2]).
 
 -define(SERVER, ?MODULE).
@@ -80,7 +79,9 @@ init(_Args) ->
 				bitmapBird_R = BitmapBird_R,
 				bitmapBird_L = BitmapBird_L,
 				bird = #bird{},
-				curr_state = idle}}.
+				curr_state = idle,
+				pcList = []
+	}}.
 
 
 % the location of the bird
@@ -90,21 +91,22 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})-
 	{noreply, NewState}.
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer}) ->%curr_state=CurrState,
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer, pcList = PC_List}) ->%curr_state=CurrState,
 %%	io:format("a "),
 	NewState = case ID of
-		?ButtonStartUserID ->
-							  wxSizer:show(MainSizer, JumpSizer, []),timer:sleep(1000),
-							  BirdPID = init_system(),timer:sleep(1000),
+		?ButtonStartUserID -> wxSizer:show(MainSizer, JumpSizer, []),
+							  BirdServerPID = init_system(),		% Init bird servers and split the work
 							  % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
-							  BirdPID ! {start_simulation},io:format("TAAMIRrr "),
-							  State#graphics_state{curr_state=play_user, birdPID=BirdPID};
+
+							  % cast pc to init FSM
+							  NumOfBirds = 1,
+							  gen_server:cast(BirdServerPID, {start_bird_FSM, NumOfBirds}),
+							  State#graphics_state{curr_state=play_user, pcList = PC_List ++ [BirdServerPID]};
 		
-		?ButtonStartNEATID -> BirdPID = init_system(),
-							  State#graphics_state{curr_state=play_NEAT, birdPID=BirdPID};	% TODO change PID
-		
-		?ButtonJumpID	   -> #graphics_state{birdPID=BirdPID} = State,
-							  gen_statem:cast(BirdPID, {jump}),
+		?ButtonStartNEATID -> _BirdPID = init_system(),
+							  State#graphics_state{curr_state=play_NEAT};	% TODO change PID
+
+		?ButtonJumpID	   -> gen_server:cast(hd(PC_List), {jump}),
 			 				  State
 	end,
 	{noreply, NewState};
@@ -117,12 +119,12 @@ handle_event(#wx{event = #wxClose{}},State = #graphics_state {frame = Frame}) ->
 	{stop,normal,State}.
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_state=CurrState}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{frame=Frame, pcList=PC_List, curr_state=CurrState}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
-	NewState = if 	CurrState == play_user ->		% Bird is falling only when state is user
-						gen_statem:cast(BirdPID, {simulate_frame}),
+	NewState = if 	CurrState == play_user ->
+						gen_server:cast(hd(PC_List), {simulate_frame}),
 						State;
 					true ->
 						State
@@ -172,10 +174,8 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP).
 
 %% ==============================
-% build a new & unique bird FSM
-create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
 init_system() ->
-	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(graphics), self()),	% TODO pc_server_pid instead of self()
-	BirdPID.
+	{ok, BirdServerPID} = pc_bird_server:start(pc1),	% init pc bird server
+	BirdServerPID.
 

@@ -29,14 +29,20 @@ init([Name]) ->
 % build a new & unique bird FSM
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, _State) ->
 	erlang:error(not_implemented).
 
 handle_cast({start_bird_FSM, 0}, State) ->
 	{noreply, State};
-handle_cast({start_bird_FSM, NumOfBirds}, State=#pc_bird_server_state{birdList = BirdList}) ->
-	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(graphics), self()),
-	handle_cast({start_bird_FSM, NumOfBirds-1}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]})
-	.
+handle_cast({start_bird_FSM, NumOfBirds}, State=#pc_bird_server_state{name = Name, birdList = BirdList}) ->
+	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(Name), self()),
+	BirdPID ! {start_simulation},
+	handle_cast({start_bird_FSM, NumOfBirds-1}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
+handle_cast({jump}, State=#pc_bird_server_state{birdList = BirdList}) ->
+	gen_statem:cast(hd(BirdList), {jump}),
+	{noreply, State};
+handle_cast({simulate_frame}, State=#pc_bird_server_state{birdList = BirdList}) ->
+	gen_statem:cast(hd(BirdList), {simulate_frame}),
+	{noreply, State}.
 %% ====================================
 
