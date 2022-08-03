@@ -40,6 +40,8 @@
 -record(graphics_state, {
 		frame,
 		panel,
+		mainSizer,
+		jumpSizer,
 		bitmapBG,
 		bitmapBird_R,
 		bitmapBird_L,

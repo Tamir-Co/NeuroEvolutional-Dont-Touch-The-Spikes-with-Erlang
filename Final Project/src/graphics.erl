@@ -33,12 +33,17 @@ init(_Args) ->
 
 	MainSizer = wxBoxSizer:new(?wxHORIZONTAL),
 	UiSizer = wxBoxSizer:new(?wxVERTICAL),
+	JumpSizer = wxBoxSizer:new(?wxVERTICAL),
 
 	wxSizer:add(MainSizer, Panel,[{flag,?wxEXPAND}]),
 	wxSizer:add(UiSizer, ButtonStartUser,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
 	wxSizer:add(UiSizer, ButtonStartNEAT,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
-	wxSizer:add(UiSizer, ButtonJump,[{flag,?wxALL bor ?wxEXPAND},{border, 2}]),
+	wxSizer:add(JumpSizer, ButtonJump,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
+	wxSizer:add(MainSizer, JumpSizer),
 	wxSizer:add(MainSizer, UiSizer),
+
+	wxSizer:hide(MainSizer, JumpSizer, []),
+	wxSizer:layout(MainSizer),
 
 	ImageBG = wxImage:new("images/background.png", []),
 	BitmapBG = wxBitmap:new(wxImage:scale(ImageBG, ?BG_WIDTH, ?BG_HEIGHT, [{quality, ?wxIMAGE_QUALITY_HIGH}])),
@@ -58,6 +63,7 @@ init(_Args) ->
 	erlang:send_after(?Timer, self(), timer),
 
 	wxPanel:connect(Panel, paint, [callback]),
+	wxFrame:connect(Frame, close_window),
 	wxButton:connect(ButtonStartUser, command_button_clicked),
 	wxButton:connect(ButtonStartNEAT, command_button_clicked),
 	wxButton:connect(ButtonJump, command_button_clicked),
@@ -67,6 +73,8 @@ init(_Args) ->
 	{Frame, #graphics_state{
 				frame = Frame,
 				panel = Panel,
+				mainSizer = MainSizer,
+				jumpSizer = JumpSizer,
 				bitmapBG = BitmapBG,
 				bitmapBird_R = BitmapBird_R,
 				bitmapBird_L = BitmapBird_L,
@@ -74,10 +82,12 @@ init(_Args) ->
 				curr_state = idle}}.
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{}) ->%curr_state=CurrState, 
-	io:format("a "),
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer}) ->%curr_state=CurrState,
+%%	io:format("a "),
 	NewState = case ID of
-		?ButtonStartUserID -> BirdPID = init_system(),
+		?ButtonStartUserID ->
+							  wxSizer:show(MainSizer, JumpSizer, []),timer:sleep(1000),
+							  BirdPID = init_system(),timer:sleep(1000),
 							  % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 							  BirdPID ! {start_simulation},io:format("TAAMIRrr "),
 							  State#graphics_state{curr_state=play_user, birdPID=BirdPID};
@@ -86,13 +96,21 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 							  State#graphics_state{curr_state=play_NEAT, birdPID=BirdPID};	% TODO change PID
 		
 		?ButtonJumpID	   -> #graphics_state{birdPID=BirdPID} = State,
-							  gen_statem:cast(BirdPID, {jump})
+							  gen_statem:cast(BirdPID, {jump}),
+			 				  State
 	end,
-	{noreply, NewState}.
+	{noreply, NewState};
+
+% closing window event
+handle_event(#wx{event = #wxClose{}},State = #graphics_state {frame = Frame}) -> % close window event
+	io:format("Exiting\n"),
+	wxWindow:destroy(Frame),
+	wx:destroy(),
+	{stop,normal,State}.
 
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_state=CurrState}) ->  % refresh screen for graphics
-	io:format("b "),
+%%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = if 	CurrState == play_user ->		% Bird is falling only when state is user
@@ -106,7 +124,7 @@ handle_info(timer, State=#graphics_state{frame=Frame, birdPID=BirdPID, curr_stat
 	{noreply, NewState}.
 
 handle_sync_event(_Event, _, _State=#graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
-	io:format("c "),
+%%	io:format("c "),
 	DC = wxPaintDC:new(Panel),
 	wxDC:clear(DC),
 	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
