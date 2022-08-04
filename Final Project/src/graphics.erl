@@ -81,6 +81,7 @@ init(_Args) ->
 		bitmapBird_L = BitmapBird_L,
 		bird = #bird{},
 		curr_state = idle,
+		spikesList = [1,0,1,0,0,1,1,0,1,0],
 		pcList = [BirdServerPID]
 	}}.
 
@@ -110,22 +111,23 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 %%	io:format("a "),
 	NewState = case ID of
 				   ?ButtonStartUserID -> wxSizer:show(MainSizer, JumpSizer, []),
-					   % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
+					   					 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
-					   % cast pc to init FSM
-					   NumOfBirds = 1,
-					   gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds}),
-					   State#graphics_state{curr_state=play_user};
+					   					 % cast pc to init FSM
+					   					 NumOfBirds = 1,
+					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds}),
+					   					 State#graphics_state{curr_state=play_user};
 
 				   ?ButtonStartNEATID -> _BirdPID = init_system(),
-					   State#graphics_state{curr_state=play_NEAT};	% TODO change PID!
+					   					 State#graphics_state{curr_state=play_NEAT};	% TODO change PID!
 
 				   ?ButtonJumpID	   -> case CurrState of
-											  play_user -> gen_server:cast(hd(PC_List), {jump});
+											  play_user -> %io:format("\007\n"), TODO if we want sound: erl -oldshell
+												  		   gen_server:cast(hd(PC_List), {jump});
 											  play_NEAT -> todo;
 											  idle -> void
 										  end,
-					   State
+					   					  State
 			   end,
 	{noreply, NewState};
 
@@ -137,27 +139,33 @@ handle_event(#wx{event = #wxClose{}},State = #graphics_state {frame = Frame}) ->
 	{stop,normal,State}.
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, curr_state=CurrState, bird=Bird}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{spikesList=SpikesList, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, curr_state=CurrState, bird=Bird}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
-	NewBird = case CurrState of
+	NewState = case CurrState of
 				  idle 		->  wxSizer:hide(MainSizer, JumpSizer, []),
-					  wxSizer:layout(MainSizer),
-					  #bird{};
-				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
-					  Bird;
+					  			wxSizer:layout(MainSizer),
+					  			State#graphics_state{bird=#bird{}};
+				  play_user -> 	case is_bird_touch_wall_spike(Bird, SpikesList) of
+									true -> io:format("Game Over!"),
+											State;
+									false-> State
+								end,
+					  			gen_server:cast(hd(PC_List), {simulate_frame}),
+					  			State;
 				  play_NEAT	->  todo,
-					  Bird
+					  			State
 			  end,
 
 	erlang:send_after(?Timer, self(), timer),	% set new timer
-	{noreply, State#graphics_state{bird=NewBird}};
+%%	io:format("NewState ~p", [NewState]),
+	{noreply, NewState};
 
 handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
-handle_sync_event(_Event, _, _State=#graphics_state{panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
+handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
 %%	io:format("c "),
 
 	DC = wxPaintDC:new(Panel),
@@ -175,7 +183,8 @@ handle_sync_event(_Event, _, _State=#graphics_state{panel=Panel, bitmapBG=Bitmap
 	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
 
 	% SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb  of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-	SpikesList = [1,1,1,1,1,1,0,0,0,1],
+
+%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
 	draw_spikes(DC, SpikesList, 100),
 
 %%	wxBitmap:destroy(BitmapBird),
@@ -196,7 +205,23 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP).
 
 %% ==============================
-
 init_system() ->
 	{ok, BirdServerPID} = pc_bird_server:start(pc1),	% init pc bird server
 	BirdServerPID.
+
+%% Receive bird location and spikes.
+%% Return true if bird disqualified and otherwise false
+is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList) ->
+%%	io:format("\n\nX=~p, Y=~p", [X, Y]),
+	case X =< ?SPIKE_HEIGHT/4 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/4 of	% bird is near the wall
+		false -> false;			% bird still in the game
+		true  -> case lists:nth(closest_spike(Y)+1, SpikesList) of	% check closest spike
+				 	0 -> false;	% bird still in the game because there is no spike near
+					1 -> true	% bird disqualified
+				 end
+	end.
+
+%% Gets a height Y and returns the closest spike's index
+closest_spike(Y) ->
+	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP,
+	trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5).

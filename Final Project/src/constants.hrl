@@ -9,22 +9,24 @@
 -author("Nadav & Tamir").
 
 
+-define(RIGHT_WALL_X, 350).		% TODO check
 -define(BG_WIDTH, 400).
 -define(BG_HEIGHT, 700).
 
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(SPIKE_WIDTH, 36).
+-define(SPIKE_HEIGHT, 36).
 -define(SPIKE_HALF_WIDTH, 18).
 -define(SPIKE_LENGTH, 30).
 -define(SPIKE_GAP, 13).
 -define(SPIKES_TOP_Y, 100).
--define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-100).
+-define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120).
 
 -define(BIRD_WIDTH, 50).
 -define(BIRD_HEIGHT, 34).
 
 -define(JUMP_VELOCITY, 15).
--define(X_VELOCITY, 5).
+-define(X_VELOCITY, 7).
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
@@ -55,6 +57,7 @@
 		bitmapBird_L,
 		bird,	% TODO change to birdList
 		curr_state,
+		spikesList,
 		pcList
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
