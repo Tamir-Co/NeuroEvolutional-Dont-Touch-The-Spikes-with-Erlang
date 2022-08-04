@@ -66,15 +66,10 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 		{left , true , _    } -> NewDirection = right    , NewX = X + ?X_VELOCITY;
 		{left , false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
 	end,
-	% case  of
-		 % -> ;
-	% end,
-	if 	Bird#bird.y >= ?SPIKES_BOTTOM_Y orelse Bird#bird.y =< ?SPIKES_TOP_Y ->	% bird touching top/bottom spikes
-								io:format("~nGame Over!~n");
-								% to idle
-							true ->
-								ok
-						end,
+	case ?SPIKES_BOTTOM_Y =< Y orelse Y =< ?SPIKES_TOP_Y of	% bird touching top/bottom spikes
+		true  -> io:format("~nGame Over!~n");% change to idle state
+		false -> ok
+	end,
 	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
 
 
