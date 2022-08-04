@@ -22,9 +22,9 @@ start(PC_Name) ->
 %% ====================================
 init([PC_Name]) ->
 	{ok, #pc_bird_server_state{
-			pcName = PC_Name,
-			curr_state = idle,
-			birdList = []
+		pcName = PC_Name,
+		curr_state = idle,
+		birdList = []
 	}}.
 
 % build a new & unique bird FSM
@@ -37,7 +37,7 @@ handle_cast({start_bird_FSM, 0}, State=#pc_bird_server_state{pcName = PC_Name}) 
 	wx_object:cast(graphics, {finish_init_birds, PC_Name}),		% tell graphics the PC finished to all start_bird_FSMs
 	{noreply, State};
 handle_cast({start_bird_FSM, NumOfBirds}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
-	{ok, BirdPID} = bird_FSM:start_bird_FSM(create_bird_FSM_name(PC_Name), self()),
+	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self()),
 	handle_cast({start_bird_FSM, NumOfBirds-1}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdList = BirdList}) ->
@@ -54,7 +54,12 @@ handle_cast({simulate_frame}, State=#pc_bird_server_state{birdList = BirdList}) 
 
 handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
 	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
-	{noreply, State}.
+	{noreply, State};
+
+handle_cast({bird_disqualified, BirdPID}, State=#pc_bird_server_state{birdList = BirdList}) ->
+	wx_object:cast(graphics, {bird_disqualified, BirdPID}),
+	{noreply, State#pc_bird_server_state{birdList = BirdList -- [BirdPID]}}.
+
 %% ====================================
 msg_all_birds([], _Msg) -> done;
 msg_all_birds([Bird|Bird_T], Msg) ->
