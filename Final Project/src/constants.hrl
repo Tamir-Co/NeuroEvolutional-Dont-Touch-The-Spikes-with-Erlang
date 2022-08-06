@@ -60,6 +60,7 @@
 		bird,	% TODO change to birdList
 		bird_x = ?BIRD_START_X,
 		bird_direction = right,
+		score = 0,
 		curr_state,
 		spikesList,
 		pcList

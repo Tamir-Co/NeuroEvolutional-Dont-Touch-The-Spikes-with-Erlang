@@ -20,13 +20,13 @@
 -define(SERVER, ?MODULE).
 
 start() ->
-	wx_object:start({local,?SERVER},?MODULE,[],[]).
+	wx_object:start({local,?SERVER}, ?MODULE, [], []).
 
 init(_Args) ->
 	process_flag(trap_exit, true),
 	WxServer = wx:new(),
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
-	Panel  = wxPanel:new(Frame,[{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
+	Panel = wxPanel:new(Frame,[{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
 	ButtonStartUser = wxButton:new(Frame, ?ButtonStartUserID, [{label, "Start (user)"}]),
 	ButtonStartNEAT = wxButton:new(Frame, ?ButtonStartNEATID, [{label, "Start (NEAT)"}]),
 	ButtonJump = wxButton:new(Frame, ?ButtonJumpID, [{label, "Jump"}]),
@@ -156,21 +156,27 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 	{noreply, NewState}.
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, curr_state=CurrState}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
+										 pcList=PC_List, bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = case CurrState of
-				  idle 		->  wxSizer:hide(UiSizer, JumpSizer, []),
-					  			wxSizer:show(UiSizer, StartSizer, []),
-					  			wxSizer:layout(MainSizer),
-					  			State#graphics_state{bird=#bird{}};
+				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
+								wxSizer:show(UiSizer, StartSizer, []),
+								wxSizer:layout(MainSizer),
+								State#graphics_state{bird=#bird{}};
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
-					  			State;
-
+								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+								case Has_changed_dir of
+									true  -> NewSpikesList = create_spikeList();
+									false -> NewSpikesList = SpikesList
+								end,
+								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList};
+								
 				  play_NEAT	->  todo,
-					  			State
+								State
 			  end,
 
 	erlang:send_after(?Timer, self(), timer),	% set new timer
@@ -180,7 +186,8 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
-handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, bird=#bird{x=X, y=Y, direction=Direction}}) ->
+handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, 
+													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y}, bird_x=X, bird_direction=Direction}) ->
 %%	io:format("c "),
 
 	DC = wxPaintDC:new(Panel),
@@ -192,15 +199,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 	end,
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
-	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),
-	% SpikeProb = 50,
-	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
-
-	% SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb  of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-
-%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
-	draw_spikes(DC, SpikesList, 100),
+	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),	draw_spikes(DC, SpikesList, 100),
 
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
@@ -210,6 +209,27 @@ handle_sync_event(_Event, _, State) ->
 %%
 %%terminate(_Reason, State = #graphics_state{}) ->
 %%	wxFrame:destroy(State#graphics_state.frame).
+
+
+%% Simulates a x movement of a bird during one frame.
+%% the output is: {NewDirection, NewX, Has_changed_direction}
+simulate_x_movement(X, Direction) ->
+	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
+		{right, _    , true } -> {left     , X - ?X_VELOCITY, true };
+		{right, _    , false} -> {Direction, X + ?X_VELOCITY, false};
+		{left , true , _    } -> {right    , X + ?X_VELOCITY, true };
+		{left , false, _    } -> {Direction, X - ?X_VELOCITY, false}
+	end.
+
+
+create_spikeList() ->
+	SpikeProb = 50,
+	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
+%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
+	SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+	SpikesList.
+
 
 draw_spikes(_, [], _) -> ok;
 draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
