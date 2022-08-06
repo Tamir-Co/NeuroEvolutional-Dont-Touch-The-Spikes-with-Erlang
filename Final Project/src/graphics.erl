@@ -168,7 +168,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 										 pcList=PC_List, bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
-
+	
 	NewState = case CurrState of
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
