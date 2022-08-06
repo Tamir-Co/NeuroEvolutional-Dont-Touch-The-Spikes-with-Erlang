@@ -173,11 +173,11 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 								wxSizer:layout(MainSizer),
 								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right};
 
-				  play_user -> 	
-								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),gen_server:cast(hd(PC_List), {simulate_frame}),
+				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
+								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 								io:format("~p ", [NewX]),
 								case Has_changed_dir of
-									true  -> NewSpikesList = create_spikeList();
+									true  -> NewSpikesList = SpikesList, create_spikeList();
 									false -> NewSpikesList = SpikesList
 								end,
 								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList};
@@ -196,7 +196,7 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 %% =================================================================
 
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, 
-													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=_BX}, bird_x=X, bird_direction=Direction}) ->
+													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=X, direction=Direction}, bird_x=_X, bird_direction=_Direction}) ->
 %%	io:format("c "),
 
 	DC = wxPaintDC:new(Panel),
