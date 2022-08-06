@@ -103,13 +103,14 @@ handle_cast({finish_init_birds, _PC_Name, CurrState}, State=#graphics_state{pcLi
 	{noreply, State#graphics_state{curr_state = CurrState}};
 
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
+	io:format("~p~n", [X]),
 	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
 	NewState = State#graphics_state{bird=NewBird},
 	{noreply, NewState};
 
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
-				   play_user -> State#graphics_state{curr_state = idle, bird = #bird{}};		% we can now goto start simulation
+				   play_user -> State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right};		% we can now goto start simulation
 				   play_NEAT -> todo, State
 			   end,
 	{noreply, NewState}.
@@ -165,10 +166,11 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
 								wxSizer:layout(MainSizer),
-								State#graphics_state{bird=#bird{}};
+								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right};
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+								io:format("~p ", [NewX]),
 								case Has_changed_dir of
 									true  -> NewSpikesList = create_spikeList();
 									false -> NewSpikesList = SpikesList
@@ -187,15 +189,15 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, 
-													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y}, bird_x=X, bird_direction=Direction}) ->
+													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=BX}, bird_x=_X, bird_direction=Direction}) ->
 %%	io:format("c "),
 
 	DC = wxPaintDC:new(Panel),
 	wxDC:clear(DC),
 	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	case Direction of
-		right -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
-		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
+		right -> wxDC:drawBitmap(DC, BitmapBird_R, {BX, Y});
+		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {BX, Y})
 	end,
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
