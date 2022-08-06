@@ -94,6 +94,7 @@ init(_Args) ->
 		pcList = [BirdServerPID]
 	}}.
 
+%% =================================================================
 
 handle_cast({finish_init_birds, _PC_Name, CurrState}, State=#graphics_state{pcList = PC_List})->
 	case CurrState of
@@ -114,6 +115,8 @@ handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = Cu
 				   play_NEAT -> todo, State
 			   end,
 	{noreply, NewState}.
+
+%% =================================================================
 
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer,jumpSizer=JumpSizer, pcList = PC_List, curr_state = CurrState}) ->
@@ -156,6 +159,8 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 	NewState = State,
 	{noreply, NewState}.
 
+%% =================================================================
+
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
 										 pcList=PC_List, bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState}) ->  % refresh screen for graphics
@@ -168,8 +173,8 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 								wxSizer:layout(MainSizer),
 								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right};
 
-				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
-								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+				  play_user -> 	
+								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),gen_server:cast(hd(PC_List), {simulate_frame}),
 								io:format("~p ", [NewX]),
 								case Has_changed_dir of
 									true  -> NewSpikesList = create_spikeList();
@@ -188,16 +193,18 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
+%% =================================================================
+
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, 
-													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=BX}, bird_x=_X, bird_direction=Direction}) ->
+													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=_BX}, bird_x=X, bird_direction=Direction}) ->
 %%	io:format("c "),
 
 	DC = wxPaintDC:new(Panel),
 	wxDC:clear(DC),
 	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	case Direction of
-		right -> wxDC:drawBitmap(DC, BitmapBird_R, {BX, Y});
-		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {BX, Y})
+		right -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
+		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
@@ -212,6 +219,7 @@ handle_sync_event(_Event, _, State) ->
 %%terminate(_Reason, State = #graphics_state{}) ->
 %%	wxFrame:destroy(State#graphics_state.frame).
 
+%% =================================================================
 
 %% Simulates a x movement of a bird during one frame.
 %% the output is: {NewDirection, NewX, Has_changed_direction}
