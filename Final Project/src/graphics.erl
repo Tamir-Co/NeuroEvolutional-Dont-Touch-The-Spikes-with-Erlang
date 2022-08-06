@@ -32,17 +32,19 @@ init(_Args) ->
 	ButtonJump = wxButton:new(Frame, ?ButtonJumpID, [{label, "Jump"}]),
 
 	MainSizer = wxBoxSizer:new(?wxHORIZONTAL),
-	UiSizer = wxBoxSizer:new(?wxVERTICAL),
+	UiSizer = wxBoxSizer:new(?wxHORIZONTAL),
+	StartSizer = wxBoxSizer:new(?wxVERTICAL),
 	JumpSizer = wxBoxSizer:new(?wxVERTICAL),
 
 	wxSizer:add(MainSizer, Panel,[{flag,?wxEXPAND}]),
-	wxSizer:add(UiSizer, ButtonStartUser,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
-	wxSizer:add(UiSizer, ButtonStartNEAT,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
+	wxSizer:add(StartSizer, ButtonStartUser,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
+	wxSizer:add(StartSizer, ButtonStartNEAT,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
 	wxSizer:add(JumpSizer, ButtonJump,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
-	wxSizer:add(MainSizer, JumpSizer),
+	wxSizer:add(UiSizer, JumpSizer),
+	wxSizer:add(UiSizer, StartSizer),
 	wxSizer:add(MainSizer, UiSizer),
 
-	wxSizer:hide(MainSizer, JumpSizer, []),
+	wxSizer:hide(UiSizer, JumpSizer, []),
 	wxSizer:layout(MainSizer),
 
 	ImageBG = wxImage:new("images/background.png", []),
@@ -80,6 +82,8 @@ init(_Args) ->
 		frame = Frame,
 		panel = Panel,
 		mainSizer = MainSizer,
+		uiSizer = UiSizer,
+		startSizer = StartSizer,
 		jumpSizer = JumpSizer,
 		bitmapBG = BitmapBG,
 		bitmapBird_R = BitmapBird_R,
@@ -112,10 +116,12 @@ handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = Cu
 	{noreply, NewState}.
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, jumpSizer=JumpSizer, pcList = PC_List, curr_state = CurrState}) ->
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer,jumpSizer=JumpSizer, pcList = PC_List, curr_state = CurrState}) ->
 %%	io:format("a "),
 	NewState = case ID of
-				   ?ButtonStartUserID -> wxSizer:show(MainSizer, JumpSizer, []),
+				   ?ButtonStartUserID -> wxSizer:show(UiSizer, JumpSizer, []),
+					   					wxSizer:hide(UiSizer, StartSizer, []),
+					   					wxSizer:layout(MainSizer),
 					   					 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
 					   					 % cast pc to init FSM
@@ -150,12 +156,13 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 	{noreply, NewState}.
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{spikesList=SpikesList, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, curr_state=CurrState, bird=Bird}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, spikesList=SpikesList, frame=Frame, pcList=PC_List, curr_state=CurrState, bird=Bird}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = case CurrState of
-				  idle 		->  wxSizer:hide(MainSizer, JumpSizer, []),
+				  idle 		->  wxSizer:hide(UiSizer, JumpSizer, []),
+					  wxSizer:show(UiSizer, StartSizer, []),
 					  			wxSizer:layout(MainSizer),
 					  			State#graphics_state{bird=#bird{}};
 				  play_user -> 	case is_bird_touch_wall_spike(Bird, SpikesList) of
@@ -227,7 +234,7 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList) ->
 %%	io:format("\n\nX=~p, Y=~p", [X, Y]),
 	case X =< ?SPIKE_HEIGHT/4 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/4 of	% bird is near the wall
 		false -> false;			% bird still in the game
-		true  -> case lists:nth(closest_spike(Y)+1, SpikesList) of	% check closest spike
+		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
 				 	0 -> false;	% bird still in the game because there is no spike near
 					1 -> true	% bird disqualified
 				 end
@@ -236,4 +243,4 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList) ->
 %% Gets a height Y and returns the closest spike's index
 closest_spike(Y) ->
 	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP,
-	trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5).
+	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).

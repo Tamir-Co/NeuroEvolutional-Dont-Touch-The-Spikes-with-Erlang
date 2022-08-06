@@ -51,6 +51,8 @@
 		frame,
 		panel,
 		mainSizer,
+		uiSizer,
+		startSizer,
 		jumpSizer,
 		bitmapBG,
 		bitmapBird_R,
