@@ -67,6 +67,11 @@ init(_Args) ->
 	wxButton:connect(ButtonStartUser, command_button_clicked),
 	wxButton:connect(ButtonStartNEAT, command_button_clicked),
 	wxButton:connect(ButtonJump, command_button_clicked),
+	
+	% wxButton:connect(ButtonJump, command_button_clicked),
+	% wx_object:connect(),
+	wxEvtHandler:connect(Frame, key_down),
+	% wxKeyEvent:wxKeyEventType()
 
 	%timer:sleep(5000),
 	BirdServerPID = init_system(),		% Init bird servers and split the work
@@ -136,7 +141,13 @@ handle_event(#wx{event = #wxClose{}},State = #graphics_state {frame = Frame}) ->
 	io:format("Exiting\n"),
 	wxWindow:destroy(Frame),
 	wx:destroy(),
-	{stop,normal,State}.
+	{stop,normal,State};
+
+%% We reach here each key_down event
+handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
+	io:format("~n~nevent key down: ~p~n", [Type]),
+	NewState = State,
+	{noreply, NewState}.
 
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{spikesList=SpikesList, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, curr_state=CurrState, bird=Bird}) ->  % refresh screen for graphics
@@ -206,7 +217,8 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
 
 %% ==============================
 init_system() ->
-	{ok, BirdServerPID} = pc_bird_server:start(pc1),	% init pc bird server
+	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
+	{ok, BirdServerPID} = pc_bird_server:start(PC_Name),	% init pc bird server
 	BirdServerPID.
 
 %% Receive bird location and spikes.
