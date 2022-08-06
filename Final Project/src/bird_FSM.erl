@@ -23,7 +23,9 @@ start(Name, PC_PID) ->
 
 % =========================================
 init([PC_PID]) ->
-	{ok, idle, #bird{pc_pid=PC_PID}}.	% Init bird location to center
+	{ok, idle, #bird{	pc_pid=PC_PID,
+						spikesList = [1,0,1,0,0,1,1,0,1,0]
+					}}.	% Init bird location to center
 
 callback_mode() ->
 	state_functions.
@@ -35,13 +37,13 @@ idle(info, {start_simulation}, Bird=#bird{}) ->
 	{next_state, simulation, Bird}.
 
 % =========================================
-simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID}) ->
-	NextBird = simulate_next_frame_bird(jump(Bird)),
+simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesList}) ->
+	NextBird = simulate_next_frame_bird(jump(Bird), SpikesList),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
 	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird};
-simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID}) ->
-	NextBird = simulate_next_frame_bird(Bird),
+simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesList}) ->
+	NextBird = simulate_next_frame_bird(Bird, SpikesList),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
 	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird}.
@@ -57,7 +59,7 @@ jump(Bird=#bird{}) ->
 	Bird#bird{velocityY=-?JUMP_VELOCITY}.
 
 
-simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction, pc_pid = PC_PID}) ->
+simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction, pc_pid = PC_PID}, SpikesList) ->
 %%	io:format("~nGame simulate_next_frame_bird!, Bird=~p~n", [Bird]),
 	%% update direction and X value
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
@@ -69,15 +71,43 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 
 	%% check if the bird touching top/bottom spikes
 	case Bird#bird.y >= ?SPIKES_BOTTOM_Y orelse Bird#bird.y =< ?SPIKES_TOP_Y of
-		true  -> io:format("~nGame Over!~n"),
-			gen_server:cast(PC_PID, {bird_disqualified, self()}),
-			terminate(normal, undefined, undefined);
+		true  -> game_over(PC_PID);
+		false -> ok
+	end,
+
+	%% check if the bird touching wall spikes
+	case is_bird_touch_wall_spike(Bird, SpikesList) of
+		true  -> game_over(PC_PID);
 		false -> ok
 	end,
 
 	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
 
 
+game_over(PC_PID) ->
+	io:format("~nGame Over!~n"),
+	gen_server:cast(PC_PID, {bird_disqualified, self()}),
+	terminate(normal, undefined, undefined).
+
+%% Receive bird location and spikes.
+%% Return true if bird disqualified and otherwise false
+is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList) ->
+%%	io:format("\n\nX=~p, Y=~p", [X, Y]),
+	case X =< ?SPIKE_HEIGHT/4 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/4 of	% bird is near the wall
+		false -> false;			% bird still in the game
+		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
+					 0 -> false;	% bird still in the game because there is no spike near
+					 1 -> true	% bird disqualified
+				 end
+	end.
+
+%% Gets a height Y and returns the closest spike's index
+closest_spike(Y) ->
+	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP,
+	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
+
+
+% =========================================
 terminate(_Reason, _StateName, _State) ->
 	ok.
 

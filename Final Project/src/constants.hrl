@@ -71,5 +71,6 @@
 		y = ?BIRD_START_Y,
 		velocityY = 0,
 		direction = right,
-		pc_pid
+		pc_pid,
+		spikesList
 }).

@@ -95,18 +95,17 @@ init(_Args) ->
 	}}.
 
 
-% the location of the bird
-handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
-	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
-	NewState = State#graphics_state{bird=NewBird},
-	{noreply, NewState};
-
-handle_cast({finish_init_birds, _PC_Name}, State=#graphics_state{curr_state = CurrState, pcList = PC_List})->
+handle_cast({finish_init_birds, _PC_Name, CurrState}, State=#graphics_state{pcList = PC_List})->
 	case CurrState of
 		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
 		play_NEAT -> todo
 	end,
-	{noreply, State};
+	{noreply, State#graphics_state{curr_state = CurrState}};
+
+handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
+	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
+	NewState = State#graphics_state{bird=NewBird},
+	{noreply, NewState};
 
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
@@ -120,17 +119,18 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 %%	io:format("a "),
 	NewState = case ID of
 				   ?ButtonStartUserID -> wxSizer:show(UiSizer, JumpSizer, []),
-					   					wxSizer:hide(UiSizer, StartSizer, []),
-					   					wxSizer:layout(MainSizer),
+					   					 wxSizer:hide(UiSizer, StartSizer, []),
+					   					 wxSizer:layout(MainSizer),
 					   					 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
 					   					 % cast pc to init FSM
 					   					 NumOfBirds = 1,
-					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds}),
-					   					 State#graphics_state{curr_state=play_user};
+					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_user}),
+					   					 State;
 
-				   ?ButtonStartNEATID -> _BirdPID = init_system(),
-					   					 State#graphics_state{curr_state=play_NEAT};	% TODO change PID!
+				   ?ButtonStartNEATID -> NumOfBirds = 1,	% TODO change
+					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT}),
+					   					 State;
 
 				   ?ButtonJumpID	   -> case CurrState of
 											  play_user -> %io:format("\007\n"), TODO if we want sound: erl -oldshell
@@ -156,22 +156,19 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 	{noreply, NewState}.
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, spikesList=SpikesList, frame=Frame, pcList=PC_List, curr_state=CurrState, bird=Bird}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, curr_state=CurrState}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 
 	NewState = case CurrState of
 				  idle 		->  wxSizer:hide(UiSizer, JumpSizer, []),
-					  wxSizer:show(UiSizer, StartSizer, []),
+					  			wxSizer:show(UiSizer, StartSizer, []),
 					  			wxSizer:layout(MainSizer),
 					  			State#graphics_state{bird=#bird{}};
-				  play_user -> 	case is_bird_touch_wall_spike(Bird, SpikesList) of
-									true -> io:format("Game Over!"),
-											State;
-									false-> State
-								end,
-					  			gen_server:cast(hd(PC_List), {simulate_frame}),
+
+				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 					  			State;
+
 				  play_NEAT	->  todo,
 					  			State
 			  end,
@@ -227,20 +224,3 @@ init_system() ->
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
 	{ok, BirdServerPID} = pc_bird_server:start(PC_Name),	% init pc bird server
 	BirdServerPID.
-
-%% Receive bird location and spikes.
-%% Return true if bird disqualified and otherwise false
-is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList) ->
-%%	io:format("\n\nX=~p, Y=~p", [X, Y]),
-	case X =< ?SPIKE_HEIGHT/4 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/4 of	% bird is near the wall
-		false -> false;			% bird still in the game
-		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
-				 	0 -> false;	% bird still in the game because there is no spike near
-					1 -> true	% bird disqualified
-				 end
-	end.
-
-%% Gets a height Y and returns the closest spike's index
-closest_spike(Y) ->
-	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP,
-	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
