@@ -56,6 +56,8 @@
 		bitmapBird_R,
 		bitmapBird_L,
 		bird,	% TODO change to birdList
+		bird_x = ?BIRD_START_X,
+		bird_direction = right,
 		curr_state,
 		spikesList,
 		pcList
