@@ -104,7 +104,7 @@ handle_cast({finish_init_birds, _PC_Name, CurrState}, State=#graphics_state{pcLi
 	{noreply, State#graphics_state{curr_state = CurrState}};
 
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
-	io:format("~p~n", [X]),
+	io:format("~p~p~n", [X, Direction]),
 	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
 	NewState = State#graphics_state{bird=NewBird},
 	{noreply, NewState};
@@ -119,7 +119,8 @@ handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = Cu
 %% =================================================================
 
 %% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer,jumpSizer=JumpSizer, pcList = PC_List, curr_state = CurrState}) ->
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
+																							  pcList = PC_List, curr_state = CurrState, bird_x=Bird_x, bird_direction=Bird_dir}) ->
 %%	io:format("a "),
 	NewState = case ID of
 				   ?ButtonStartUserID -> wxSizer:show(UiSizer, JumpSizer, []),
@@ -138,11 +139,12 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 
 				   ?ButtonJumpID	   -> case CurrState of
 											  play_user -> %io:format("\007\n"), TODO if we want sound: erl -oldshell
-												  		   gen_server:cast(hd(PC_List), {jump});
-											  play_NEAT -> todo;
-											  idle -> void
-										  end,
-					   					  State
+												  		   gen_server:cast(hd(PC_List), {jump}),
+														   {NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
+														   State#graphics_state{bird_x=NewX, bird_direction=NewDirection};
+											  play_NEAT -> todo, State;
+											  idle -> void, State
+										  end
 			   end,
 	{noreply, NewState};
 
@@ -175,9 +177,9 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-								io:format("~p ", [NewX]),
+								io:format("~p~p ", [NewX, NewDirection]),
 								case Has_changed_dir of
-									true  -> NewSpikesList = SpikesList, create_spikeList();
+									true  -> NewSpikesList = create_spikeList();	%SpikesList, 
 									false -> NewSpikesList = SpikesList
 								end,
 								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList};
@@ -196,7 +198,7 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 %% =================================================================
 
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, 
-													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=X, direction=Direction}, bird_x=_X, bird_direction=_Direction}) ->
+													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=_X, direction=_Direction}, bird_x=X, bird_direction=Direction}) ->
 %%	io:format("c "),
 
 	DC = wxPaintDC:new(Panel),
@@ -208,7 +210,8 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 	end,
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
-	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),	draw_spikes(DC, SpikesList, 100),
+	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),
+	draw_spikes(DC, SpikesList, 100, Direction),
 
 %%	wxBitmap:destroy(BitmapBird),
 %%	wxBitmap:destroy(BitmapBG),
@@ -241,13 +244,17 @@ create_spikeList() ->
 	SpikesList.
 
 
-draw_spikes(_, [], _) -> ok;
-draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y) ->
+draw_spikes(_, [], _, _) -> ok;
+draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y, Direction) ->
 	case IsSpike of
-		1 -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {25, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}]);
+		1 -> 
+			case Direction of
+				right -> wxDC:drawPolygon(DC, [{?BG_WIDTH, CurrSpike_Y}, {?BG_WIDTH-?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {?BG_WIDTH, CurrSpike_Y+?SPIKE_WIDTH}]);
+				left  -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}])
+			end;
 		0 -> no_spike
 	end,
-	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP).
+	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP, Direction).
 
 %% ==============================
 init_system() ->

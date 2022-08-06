@@ -15,9 +15,8 @@
 
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(SPIKE_WIDTH, 36).
--define(SPIKE_HEIGHT, 36).
+-define(SPIKE_HEIGHT, 25).
 -define(SPIKE_HALF_WIDTH, 18).
--define(SPIKE_LENGTH, 30).
 -define(SPIKE_GAP, 13).
 -define(SPIKES_TOP_Y, 100).
 -define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120).
