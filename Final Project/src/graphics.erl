@@ -52,12 +52,13 @@ init(_Args) ->
 %%	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
 
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
-	% ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
-	ImageBird_L = wxImage:mirror(ImageBird_R),
+	ImageBird_L = wxImage:mirror(ImageBird_R),	% ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
 	BitmapBird_R = wxBitmap:new(wxImage:scale(ImageBird_R, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 %%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
-
+	
+	TxtScore = wxStaticText:new(Panel, -1, "Score: 0"),%, [{pos, {?BG_WIDTH/2, 50}}]),
+	
 	wxPanel:setSizer(Frame, MainSizer),
 	wxSizer:setSizeHints(MainSizer, Frame),
 
@@ -70,10 +71,6 @@ init(_Args) ->
 	wxButton:connect(ButtonStartNEAT, command_button_clicked),
 	wxButton:connect(ButtonJump, command_button_clicked),
 	
-	% wxButton:connect(ButtonJump, command_button_clicked),
-	% wx_object:connect(),
-	wxEvtHandler:connect(Frame, key_down),
-	% wxKeyEvent:wxKeyEventType()
 
 	%timer:sleep(5000),
 	BirdServerPID = init_system(),		% Init bird servers and split the work
@@ -81,6 +78,7 @@ init(_Args) ->
 	{Frame, #graphics_state{
 		frame = Frame,
 		panel = Panel,
+		textScore = TxtScore,
 		mainSizer = MainSizer,
 		uiSizer = UiSizer,
 		startSizer = StartSizer,
@@ -165,26 +163,28 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% =================================================================
 
 %% We reach here each timer event
-handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
-										 pcList=PC_List, bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState}) ->  % refresh screen for graphics
+handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List,
+										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
-	
+	%io:format("score: ~p", [Score]),
 	NewState = case CurrState of
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
 								wxSizer:layout(MainSizer),
-								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right};
+								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right, score=0};
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 %%								io:format("~p~p ", [NewX, NewDirection]),
 								case Has_changed_dir of
 									true  -> NewSpikesList = create_spikeList(),
-											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList});	%SpikesList,
-									false -> NewSpikesList = SpikesList
+											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
+											 NewScore = Score + 1;
+									false -> NewSpikesList = SpikesList,
+											 NewScore = Score
 								end,
-								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList};
+								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore};
 								
 				  play_NEAT	->  todo,
 								State
@@ -199,9 +199,9 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 
 %% =================================================================
 
-handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, 
-													bitmapBird_L=BitmapBird_L, bird=#bird{y=Y, x=_X, direction=_Direction}, bird_x=X, bird_direction=Direction}) ->
-%%	io:format("c "),
+handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, 
+													bird=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, textScore=TxtScore}) ->
+%%	io:format("c "),											  ^, x=_X, direction=_Direction
 
 	DC = wxPaintDC:new(Panel),
 	wxDC:clear(DC),
@@ -210,6 +210,8 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 		right -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
 		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
+	
+	wxStaticText:setLabel(TxtScore, "score: " ++ integer_to_list(Score)),
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
 	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),

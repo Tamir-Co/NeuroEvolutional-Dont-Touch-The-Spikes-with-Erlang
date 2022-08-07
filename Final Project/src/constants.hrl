@@ -49,6 +49,7 @@
 -record(graphics_state, {
 		frame,
 		panel,
+		textScore,
 		mainSizer,
 		uiSizer,
 		startSizer,
