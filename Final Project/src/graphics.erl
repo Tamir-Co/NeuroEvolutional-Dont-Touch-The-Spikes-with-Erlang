@@ -284,6 +284,6 @@ init_system() ->
 %% os:cmd("aplay sounds/lose.wav")
 sound() ->
 	receive
-		SoundName -> ok%os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
+		SoundName -> SoundName%os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
 	end,
 	sound().
