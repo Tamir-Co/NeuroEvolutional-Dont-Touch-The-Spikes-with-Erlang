@@ -109,7 +109,7 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})-
 
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
-				   play_user -> State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right};		% we can now goto start simulation
+				   play_user -> State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r};		% we can now goto start simulation
 				   play_NEAT -> todo, State
 			   end,
 	{noreply, NewState}.
@@ -172,7 +172,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
 								wxSizer:layout(MainSizer),
-								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=right, score=0};
+								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, score=0};
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
@@ -207,8 +207,8 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 	wxDC:clear(DC),
 	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	case Direction of
-		right -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
-		left  -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
+		r -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
+		l -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
 	
 	wxStaticText:setLabel(TxtScore, "score: " ++ integer_to_list(Score)),
@@ -232,10 +232,10 @@ handle_sync_event(_Event, _, State) ->
 %% the output is: {NewDirection, NewX, Has_changed_direction}
 simulate_x_movement(X, Direction) ->
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{right, _    , true } -> {left     , X - ?X_VELOCITY, true };
-		{right, _    , false} -> {Direction, X + ?X_VELOCITY, false};
-		{left , true , _    } -> {right    , X + ?X_VELOCITY, true };
-		{left , false, _    } -> {Direction, X - ?X_VELOCITY, false}
+		{r, _    , true } -> {l     , X - ?X_VELOCITY, true };
+		{r, _    , false} -> {Direction, X + ?X_VELOCITY, false};
+		{l, true , _    } -> {r    , X + ?X_VELOCITY, true };
+		{l, false, _    } -> {Direction, X - ?X_VELOCITY, false}
 	end.
 
 
@@ -253,8 +253,8 @@ draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y, Direction) ->
 	case IsSpike of
 		1 -> 
 			case Direction of
-				right -> wxDC:drawPolygon(DC, [{?BG_WIDTH, CurrSpike_Y}, {?BG_WIDTH-?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {?BG_WIDTH, CurrSpike_Y+?SPIKE_WIDTH}]);
-				left  -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}])
+				r -> wxDC:drawPolygon(DC, [{?BG_WIDTH, CurrSpike_Y}, {?BG_WIDTH-?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {?BG_WIDTH, CurrSpike_Y+?SPIKE_WIDTH}]);
+				l  -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}])
 			end;
 		0 -> no_spike
 	end,

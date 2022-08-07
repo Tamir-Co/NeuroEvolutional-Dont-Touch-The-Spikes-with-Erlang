@@ -16,6 +16,7 @@
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(SPIKE_WIDTH, 36).
 -define(SPIKE_HEIGHT, 25).
+-define(SPIKE_HEIGHT_4, 6).
 -define(SPIKE_HALF_WIDTH, 18).
 -define(SPIKE_GAP, 13).
 -define(SPIKES_TOP_Y, 100).
@@ -59,7 +60,7 @@
 		bitmapBird_L,
 		bird,	% TODO change to birdList
 		bird_x = ?BIRD_START_X,
-		bird_direction = right,
+		bird_direction = r,
 		score = 0,
 		curr_state,
 		spikesList,
@@ -71,7 +72,7 @@
 		x = ?BIRD_START_X,
 		y = ?BIRD_START_Y,
 		velocityY = 0,
-		direction = right,
+		direction = r,
 		pc_pid,
 		spikesList
 }).

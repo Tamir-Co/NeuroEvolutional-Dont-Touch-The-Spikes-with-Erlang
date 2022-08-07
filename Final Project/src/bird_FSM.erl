@@ -65,48 +65,47 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 %%	io:format("~nGame simulate_next_frame_bird!, Bird=~p~n", [Bird]),
 	%% update direction and X value
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{right, _    , true } -> NewDirection = left     , NewX = X - ?X_VELOCITY;
-		{right, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
-		{left , true , _    } -> NewDirection = right    , NewX = X + ?X_VELOCITY;
-		{left , false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
+		{r, _    , true } -> NewDirection = l     , NewX = X - ?X_VELOCITY;
+		{r, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
+		{l, true , _    } -> NewDirection = r    , NewX = X + ?X_VELOCITY;
+		{l, false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
 	end,
 
 	%% check if the bird touching top/bottom spikes
-	case Bird#bird.y >= ?SPIKES_BOTTOM_Y orelse Bird#bird.y =< ?SPIKES_TOP_Y of
-		true  -> game_over(PC_PID);
+	case Y >= ?SPIKES_BOTTOM_Y orelse Y =< ?SPIKES_TOP_Y of
+		true  -> game_over(PC_PID, top_bottom);
 		false -> ok
 	end,
 
 	%% check if the bird touching wall spikes, only when heading to the wall and near it
-	case (X =< ?SPIKE_HEIGHT/5 andalso NewDirection == left)  orelse (X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/5 andalso NewDirection == right) of
-		true ->
-			case is_bird_touch_wall_spike(Bird, SpikesList) of
-				true  -> game_over(PC_PID);
+%%	case (X =< ?SPIKE_HEIGHT_4 andalso NewDirection == l)  orelse (X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT_4 andalso NewDirection == r) of
+%%		true ->
+			case is_bird_touch_wall_spike(Bird, SpikesList, NewDirection) of
+				true  -> game_over(PC_PID, wall);
 				false -> ok
-			end;
-		false -> ok
-	end,
+			end,
+%%		false -> ok
+%%	end,
 
 	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+2, direction=NewDirection}.
 
 
-game_over(PC_PID) ->
-	io:format("~nGame Over!~n"),
+game_over(PC_PID, Reason) ->
 	gen_server:cast(PC_PID, {bird_disqualified, self()}),
+	io:format("~nGame Over! touch the ~p~n",[Reason]),
 	terminate(normal, undefined, undefined).
 
 %% Receive bird location and spikes.
 %% Return true if bird disqualified and otherwise false
-is_bird_touch_wall_spike(_Bird=#bird{x=_X, y=Y}, SpikesList) ->
+is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
 %%	io:format("\n\nX=~p, Y=~p", [X, Y]),
-%%	case X =< ?SPIKE_HEIGHT/5 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/5 of	% bird is near the wall
-%%		false -> false;				% bird still in the game
-%%		true  ->
-			case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
+	case (X =< ?SPIKE_HEIGHT_4 andalso Direction == l)  orelse (X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT_4 andalso Direction == r) of	% bird is near the wall
+		false -> false;				% bird still in the game
+		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
 					 0 -> false;	% bird still in the game because there is no spike near
 					 1 -> true		% bird disqualified
-				 end.
-%%	end.
+				 end
+	end.
 
 %% Gets a height Y and returns the closest spike's index
 closest_spike(Y) ->

@@ -35,6 +35,7 @@ handle_call(_Request, _From, _State) ->
 
 handle_cast({start_bird_FSM, 0, CurrState, _SpikesList}, State=#pc_bird_server_state{pcName = PC_Name}) ->
 	wx_object:cast(graphics, {finish_init_birds, PC_Name, CurrState}),		% tell graphics the PC finished to all start_bird_FSMs
+	io:format("finish_init_birds!~n"),
 	{noreply, State#pc_bird_server_state{curr_state=CurrState}};
 handle_cast({start_bird_FSM, NumOfBirds, CurrState, SpikesList}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
 	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList),
@@ -69,7 +70,7 @@ handle_cast({bird_disqualified, BirdPID}, State=#pc_bird_server_state{curr_state
 msg_all_birds([], _Msg, _IsMsg) -> done;
 msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 	case IsMsg of
-		true -> Bird ! Msg;
+		true -> Bird ! Msg, io:format("Msg: ~p to bird:~p~n", [Msg,Bird]);
 		false-> gen_statem:cast(Bird, Msg)
 	end,
 	msg_all_birds(Bird_T, Msg, IsMsg).
