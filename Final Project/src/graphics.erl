@@ -16,6 +16,7 @@
 
 -export([start/0]).
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2, handle_cast/2]).
+-export([sound/0]).
 
 -define(SERVER, ?MODULE).
 
@@ -70,10 +71,12 @@ init(_Args) ->
 	wxButton:connect(ButtonStartUser, command_button_clicked),
 	wxButton:connect(ButtonStartNEAT, command_button_clicked),
 	wxButton:connect(ButtonJump, command_button_clicked),
-	
 
-	%timer:sleep(5000),
-	BirdServerPID = init_system(),		% Init bird servers and split the work
+	%% spawn sound maker process
+	register(sound_proc, spawn(?MODULE, sound, [])),
+
+	% Init bird servers and split the work
+	BirdServerPID = init_system(),
 
 	{Frame, #graphics_state{
 		frame = Frame,
@@ -109,7 +112,8 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})-
 
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
-				   play_user -> State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r};		% we can now goto start simulation
+				   play_user -> sound_proc ! "lose_trim",
+					   			State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r};		% we can now goto start simulation
 				   play_NEAT -> todo, State
 			   end,
 	{noreply, NewState}.
@@ -138,7 +142,8 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 										 State#graphics_state{score=0};
 
 				   ?ButtonJumpID	  -> case CurrState of
-											  play_user -> %io:format("\007\n"), TODO if we want sound: erl -oldshell
+											  play_user -> sound_proc ! "jump_trim",
+												  			%io:format("\007\n"), TODO if we want sound: erl -oldshell
 														   gen_server:cast(hd(PC_List), {jump}),
 														   {NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
 														   State#graphics_state{bird_x=NewX, bird_direction=NewDirection};
@@ -153,6 +158,7 @@ handle_event(#wx{event = #wxClose{}},State = #graphics_state {frame = Frame}) ->
 	io:format("Exiting\n"),
 	wxWindow:destroy(Frame),
 	wx:destroy(),
+	unregister(sound_proc),
 	{stop,normal,State};
 
 %% We reach here each key_down event
@@ -179,7 +185,8 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 %%								io:format("~p~p ", [NewX, NewDirection]),
 								case Has_changed_dir of
-									true  -> NewSpikesList = create_spikeList(),
+									true  -> sound_proc ! "bonus_trim",
+											 NewSpikesList = create_spikeList(),
 											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
 											 NewScore = Score + 1;
 									false -> NewSpikesList = SpikesList,
@@ -266,3 +273,10 @@ init_system() ->
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
 	{ok, BirdServerPID} = pc_bird_server:start(PC_Name),	% init pc bird server
 	BirdServerPID.
+
+%% os:cmd("aplay sounds/lose.wav")
+sound() ->
+	receive
+		SoundName -> os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
+	end,
+	sound().
