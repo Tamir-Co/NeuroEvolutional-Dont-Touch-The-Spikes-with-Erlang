@@ -33,13 +33,19 @@ create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Nam
 handle_call(_Request, _From, _State) ->
 	erlang:error(not_implemented).
 
-handle_cast({start_bird_FSM, 0, CurrState, _SpikesList}, State=#pc_bird_server_state{pcName = PC_Name}) ->
-	wx_object:cast(graphics, {finish_init_birds, PC_Name, CurrState}),		% tell graphics the PC finished to all start_bird_FSMs
-	io:format("finish_init_birds!~n"),
-	{noreply, State#pc_bird_server_state{curr_state=CurrState}};
+%%handle_cast({start_bird_FSM, 0, CurrState, _SpikesList}, State) ->
+%%	wx_object:cast(graphics, {finish_init_birds, self(), CurrState}),		% tell graphics the PC finished to all start_bird_FSMs
+%%	io:format("finish_init_birds!~n"),
+%%	{noreply, State#pc_bird_server_state{curr_state=CurrState}};
+%%handle_cast({start_bird_FSM, NumOfBirds, CurrState, SpikesList}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
+%%	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList),
+%%	handle_cast({start_bird_FSM, NumOfBirds-1, CurrState, SpikesList}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
+
 handle_cast({start_bird_FSM, NumOfBirds, CurrState, SpikesList}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
-	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList),
-	handle_cast({start_bird_FSM, NumOfBirds-1, CurrState, SpikesList}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
+	NewBirdList = start_bird_FSM(NumOfBirds, PC_Name, SpikesList, BirdList),
+	wx_object:cast(graphics, {finish_init_birds, self(), CurrState}),		% tell graphics the PC finished to all start_bird_FSMs
+	io:format("finish_init_birds!~n"),
+	{noreply, State#pc_bird_server_state{curr_state=CurrState, birdList = NewBirdList}};
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdList = BirdList}) ->
 	msg_all_birds(BirdList, {start_simulation}, true),
@@ -66,6 +72,12 @@ handle_cast({bird_disqualified, BirdPID}, State=#pc_bird_server_state{curr_state
 	{noreply, State#pc_bird_server_state{curr_state = check_state(BirdList, CurrState), birdList = BirdList -- [BirdPID]}}.
 
 %% ====================================
+%% Start all bird FSMs and return the new bird list
+start_bird_FSM(0, _PC_Name, _SpikesList, BirdList) -> BirdList;
+start_bird_FSM(NumOfBirds, PC_Name, SpikesList, BirdList) ->
+	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList),
+	start_bird_FSM(NumOfBirds-1, PC_Name, SpikesList, BirdList ++ [BirdPID]).
+
 %% Send message/cast to all birds
 msg_all_birds([], _Msg, _IsMsg) -> done;
 msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
