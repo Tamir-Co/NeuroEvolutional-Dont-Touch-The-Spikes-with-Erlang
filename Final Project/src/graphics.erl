@@ -94,7 +94,7 @@ init(_Args) ->
 
 %% =================================================================
 
-handle_cast({finish_init_birds, _PC_Name, CurrState}, State=#graphics_state{pcList = PC_List})->
+handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcList = PC_List})->
 	case CurrState of
 		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
 		play_NEAT -> todo
@@ -130,11 +130,11 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 					   					 % cast pc to init FSM
 					   					 NumOfBirds = 1,
 					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_user, SpikesList}),
-					   					 State;
+					   					 State#graphics_state{score=0};
 
 				   ?ButtonStartNEATID -> NumOfBirds = 1,	% TODO change
 					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT, SpikesList}),
-					   					 State;
+					   					 State#graphics_state{score=0};
 
 				   ?ButtonJumpID	   -> case CurrState of
 											  play_user -> %io:format("\007\n"), TODO if we want sound: erl -oldshell
@@ -172,7 +172,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
 								wxSizer:layout(MainSizer),
-								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, score=0};
+								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r};	%, score=0
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
