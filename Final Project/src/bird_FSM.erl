@@ -65,9 +65,9 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 %%	io:format("~nGame simulate_next_frame_bird!, Bird=~p~n", [Bird]),
 	%% update direction and X value
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{r, _    , true } -> NewDirection = l     , NewX = X - ?X_VELOCITY;
+		{r, _    , true } -> NewDirection = l        , NewX = X - ?X_VELOCITY;
 		{r, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
-		{l, true , _    } -> NewDirection = r    , NewX = X + ?X_VELOCITY;
+		{l, true , _    } -> NewDirection = r        , NewX = X + ?X_VELOCITY;
 		{l, false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
 	end,
 

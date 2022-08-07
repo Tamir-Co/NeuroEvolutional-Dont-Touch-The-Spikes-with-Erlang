@@ -27,7 +27,8 @@ init(_Args) ->
 	process_flag(trap_exit, true),
 	WxServer = wx:new(),
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
-	Panel = wxPanel:new(Frame,[{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
+	Panel = wxPanel:new(Frame, [{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
+	wxPanel:setBackgroundColour(Panel, {235,235,235}),
 	ButtonStartUser = wxButton:new(Frame, ?ButtonStartUserID, [{label, "Start (user)"}]),
 	ButtonStartNEAT = wxButton:new(Frame, ?ButtonStartNEATID, [{label, "Start (NEAT)"}]),
 	ButtonJump = wxButton:new(Frame, ?ButtonJumpID, [{label, "Jump"}]),
@@ -36,7 +37,7 @@ init(_Args) ->
 	UiSizer = wxBoxSizer:new(?wxHORIZONTAL),
 	StartSizer = wxBoxSizer:new(?wxVERTICAL),
 	JumpSizer = wxBoxSizer:new(?wxVERTICAL),
-
+	
 	wxSizer:add(MainSizer, Panel,[{flag,?wxEXPAND}]),
 	wxSizer:add(StartSizer, ButtonStartUser,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
 	wxSizer:add(StartSizer, ButtonStartNEAT,[{flag,?wxALL bor ?wxEXPAND},{border, 5}]),
@@ -44,24 +45,30 @@ init(_Args) ->
 	wxSizer:add(UiSizer, JumpSizer),
 	wxSizer:add(UiSizer, StartSizer),
 	wxSizer:add(MainSizer, UiSizer),
-
+	
 	wxSizer:hide(UiSizer, JumpSizer, []),
 	wxSizer:layout(MainSizer),
-
+	wxPanel:setSizer(Frame, MainSizer),
+	wxSizer:setSizeHints(MainSizer, Frame),
+	
+	%TxtSizer = wxBoxSizer:new(?wxVERTICAL),
+	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0", [{style, ?wxALIGN_CENTRE}]),	%{size, {100, 100}}, 
+	FontScore = wxFont:new(16, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
+	wxStaticText:setFont(TxtScore, FontScore),
+	%wxStaticText:setBackgroundColour(TxtScore, {200,200,200}),
+	%wxSizer:add(TxtSizer, TxtScore, [{flag, ?wxALIGN_CENTRE}, {border, 5}]),	%{flag, ?wxLEFT bor ?wxTOP bor ?wxRIGHT bor ?wxEXPAND}
+	%wxPanel:setSizer(Panel, TxtSizer),
+	%wxSizer:setSizeHints(TxtSizer, Panel),
+	
 	ImageBG = wxImage:new("images/background.png", []),
 	BitmapBG = wxBitmap:new(wxImage:scale(ImageBG, ?BG_WIDTH, ?BG_HEIGHT, [{quality, ?wxIMAGE_QUALITY_HIGH}])),
 %%	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
-
+	
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
 	ImageBird_L = wxImage:mirror(ImageBird_R),	% ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
 	BitmapBird_R = wxBitmap:new(wxImage:scale(ImageBird_R, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 %%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
-	
-	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0"),%, [{pos, {?BG_WIDTH/2, 50}}]),
-	
-	wxPanel:setSizer(Frame, MainSizer),
-	wxSizer:setSizeHints(MainSizer, Frame),
 
 	wxFrame:show(Frame),
 	erlang:send_after(?Timer, self(), timer),
@@ -219,7 +226,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 		l -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
 	
-	wxStaticText:setLabel(TxtScore, "score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
+	wxStaticText:setLabel(TxtScore, "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
 	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),
@@ -240,9 +247,9 @@ handle_sync_event(_Event, _, State) ->
 %% the output is: {NewDirection, NewX, Has_changed_direction}
 simulate_x_movement(X, Direction) ->
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{r, _    , true } -> {l     , X - ?X_VELOCITY, true };
+		{r, _    , true } -> {l        , X - ?X_VELOCITY, true };
 		{r, _    , false} -> {Direction, X + ?X_VELOCITY, false};
-		{l, true , _    } -> {r    , X + ?X_VELOCITY, true };
+		{l, true , _    } -> {r        , X + ?X_VELOCITY, true };
 		{l, false, _    } -> {Direction, X - ?X_VELOCITY, false}
 	end.
 
@@ -277,6 +284,6 @@ init_system() ->
 %% os:cmd("aplay sounds/lose.wav")
 sound() ->
 	receive
-		SoundName -> os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
+		SoundName -> ok%os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
 	end,
 	sound().
