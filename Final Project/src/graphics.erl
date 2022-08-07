@@ -57,7 +57,7 @@ init(_Args) ->
 	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 %%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
 	
-	TxtScore = wxStaticText:new(Panel, -1, "Score: 0"),%, [{pos, {?BG_WIDTH/2, 50}}]),
+	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0"),%, [{pos, {?BG_WIDTH/2, 50}}]),
 	
 	wxPanel:setSizer(Frame, MainSizer),
 	wxSizer:setSizeHints(MainSizer, Frame),
@@ -119,26 +119,27 @@ handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = Cu
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
 																							  pcList = PC_List, curr_state = CurrState, bird_x=Bird_x, bird_direction=Bird_dir,
-																							  spikesList = SpikesList}) ->
+																							  spikesList = SpikesList, score=Score, bestScore=BestScore}) ->
 %%	io:format("a "),
 	NewState = case ID of
 				   ?ButtonStartUserID -> wxSizer:show(UiSizer, JumpSizer, []),
-					   					 wxSizer:hide(UiSizer, StartSizer, []),
-					   					 wxSizer:layout(MainSizer),
-					   					 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
+										 wxSizer:hide(UiSizer, StartSizer, []),
+										 wxSizer:layout(MainSizer),
+										 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
-					   					 % cast pc to init FSM
-					   					 NumOfBirds = 1,
-					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_user, SpikesList}),
-					   					 State#graphics_state{score=0};
+										 % cast pc to init FSM
+										 NumOfBirds = 1,
+										 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_user, SpikesList}),
+										 
+										 State#graphics_state{score=0, bestScore=max(BestScore, Score)};
 
 				   ?ButtonStartNEATID -> NumOfBirds = 1,	% TODO change
-					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT, SpikesList}),
-					   					 State#graphics_state{score=0};
+										 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT, SpikesList}),
+										 State#graphics_state{score=0};
 
-				   ?ButtonJumpID	   -> case CurrState of
+				   ?ButtonJumpID	  -> case CurrState of
 											  play_user -> %io:format("\007\n"), TODO if we want sound: erl -oldshell
-												  		   gen_server:cast(hd(PC_List), {jump}),
+														   gen_server:cast(hd(PC_List), {jump}),
 														   {NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
 														   State#graphics_state{bird_x=NewX, bird_direction=NewDirection};
 											  play_NEAT -> todo, State;
@@ -200,7 +201,7 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 %% =================================================================
 
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, 
-													bird=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, textScore=TxtScore}) ->
+													bird=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
 %%	io:format("c "),											  ^, x=_X, direction=_Direction
 
 	DC = wxPaintDC:new(Panel),
@@ -211,7 +212,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 		l -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
 	
-	wxStaticText:setLabel(TxtScore, "score: " ++ integer_to_list(Score)),
+	wxStaticText:setLabel(TxtScore, "score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
 
 	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
 	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),

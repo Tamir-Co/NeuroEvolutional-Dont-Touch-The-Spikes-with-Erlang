@@ -62,6 +62,7 @@
 		bird_x = ?BIRD_START_X,
 		bird_direction = r,
 		score = 0,
+		bestScore = 0,
 		curr_state,
 		spikesList,
 		pcList
