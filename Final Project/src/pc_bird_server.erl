@@ -33,15 +33,19 @@ create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Nam
 handle_call(_Request, _From, _State) ->
 	erlang:error(not_implemented).
 
-handle_cast({start_bird_FSM, 0, CurrState}, State=#pc_bird_server_state{pcName = PC_Name}) ->
+handle_cast({start_bird_FSM, 0, CurrState, _SpikesList}, State=#pc_bird_server_state{pcName = PC_Name}) ->
 	wx_object:cast(graphics, {finish_init_birds, PC_Name, CurrState}),		% tell graphics the PC finished to all start_bird_FSMs
 	{noreply, State#pc_bird_server_state{curr_state=CurrState}};
-handle_cast({start_bird_FSM, NumOfBirds, CurrState}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
-	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self()),
-	handle_cast({start_bird_FSM, NumOfBirds-1, CurrState}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
+handle_cast({start_bird_FSM, NumOfBirds, CurrState, SpikesList}, State=#pc_bird_server_state{pcName = PC_Name, birdList = BirdList}) ->
+	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList),
+	handle_cast({start_bird_FSM, NumOfBirds-1, CurrState, SpikesList}, State#pc_bird_server_state{birdList = BirdList ++ [BirdPID]});
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdList = BirdList}) ->
-	msg_all_birds(BirdList, {start_simulation}),
+	msg_all_birds(BirdList, {start_simulation}, true),
+	{noreply, State};
+
+handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{birdList = BirdList}) ->
+	msg_all_birds(BirdList, {spikes_list, SpikesList}, false),
 	{noreply, State};
 
 handle_cast({jump}, State=#pc_bird_server_state{birdList = BirdList}) ->
@@ -61,11 +65,14 @@ handle_cast({bird_disqualified, BirdPID}, State=#pc_bird_server_state{curr_state
 	{noreply, State#pc_bird_server_state{curr_state = check_state(BirdList, CurrState), birdList = BirdList -- [BirdPID]}}.
 
 %% ====================================
-%% Send message to all birds
-msg_all_birds([], _Msg) -> done;
-msg_all_birds([Bird|Bird_T], Msg) ->
-	Bird ! Msg,
-	msg_all_birds(Bird_T, Msg).
+%% Send message/cast to all birds
+msg_all_birds([], _Msg, _IsMsg) -> done;
+msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
+	case IsMsg of
+		true -> Bird ! Msg;
+		false-> gen_statem:cast(Bird, Msg)
+	end,
+	msg_all_birds(Bird_T, Msg, IsMsg).
 
 %% Check system state by the amount of running birds
 check_state(BirdList, CurrState) ->

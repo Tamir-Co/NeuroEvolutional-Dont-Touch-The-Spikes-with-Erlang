@@ -104,7 +104,7 @@ handle_cast({finish_init_birds, _PC_Name, CurrState}, State=#graphics_state{pcLi
 	{noreply, State#graphics_state{curr_state = CurrState}};
 
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
-	io:format("~p~p~n", [X, Direction]),
+%%	io:format("~p~p~n", [X, Direction]),
 	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
 	NewState = State#graphics_state{bird=NewBird},
 	{noreply, NewState};
@@ -120,7 +120,8 @@ handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = Cu
 
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
-																							  pcList = PC_List, curr_state = CurrState, bird_x=Bird_x, bird_direction=Bird_dir}) ->
+																							  pcList = PC_List, curr_state = CurrState, bird_x=Bird_x, bird_direction=Bird_dir,
+																							  spikesList = SpikesList}) ->
 %%	io:format("a "),
 	NewState = case ID of
 				   ?ButtonStartUserID -> wxSizer:show(UiSizer, JumpSizer, []),
@@ -130,11 +131,11 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 
 					   					 % cast pc to init FSM
 					   					 NumOfBirds = 1,
-					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_user}),
+					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_user, SpikesList}),
 					   					 State;
 
 				   ?ButtonStartNEATID -> NumOfBirds = 1,	% TODO change
-					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT}),
+					   					 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT, SpikesList}),
 					   					 State;
 
 				   ?ButtonJumpID	   -> case CurrState of
@@ -177,9 +178,10 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-								io:format("~p~p ", [NewX, NewDirection]),
+%%								io:format("~p~p ", [NewX, NewDirection]),
 								case Has_changed_dir of
-									true  -> NewSpikesList = create_spikeList();	%SpikesList, 
+									true  -> NewSpikesList = create_spikeList(),
+											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList});	%SpikesList,
 									false -> NewSpikesList = SpikesList
 								end,
 								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList};

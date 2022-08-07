@@ -12,19 +12,19 @@
 -include("constants.hrl").
 
 %% API
--export([start/2]).
+-export([start/3]).
 -export([init/1, callback_mode/0, terminate/3, stop/0]).
 -export([idle/3, simulation/3]).
 
 % =========================================
 %% Creates a gen_statem process which calls bird_FSM:init/1
-start(Name, PC_PID) ->
-	gen_statem:start({local,Name}, ?MODULE, [PC_PID], []).
+start(Name, PC_PID, SpikesList) ->
+	gen_statem:start({local,Name}, ?MODULE, [PC_PID, SpikesList], []).
 
 % =========================================
-init([PC_PID]) ->
+init([PC_PID, SpikesList]) ->
 	{ok, idle, #bird{	pc_pid=PC_PID,
-						spikesList = [1,0,1,0,0,1,1,0,1,0]
+						spikesList = SpikesList
 					}}.	% Init bird location to center
 
 callback_mode() ->
@@ -37,6 +37,8 @@ idle(info, {start_simulation}, Bird=#bird{}) ->
 	{next_state, simulation, Bird}.
 
 % =========================================
+simulation(cast, {spikes_list, SpikesList}, Bird) ->
+	{keep_state, Bird#bird{spikesList = SpikesList}};
 simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesList}) ->
 	NextBird = simulate_next_frame_bird(jump(Bird), SpikesList),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
@@ -75,9 +77,13 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 		false -> ok
 	end,
 
-	%% check if the bird touching wall spikes
-	case is_bird_touch_wall_spike(Bird, SpikesList) of
-		true  -> game_over(PC_PID);
+	%% check if the bird touching wall spikes, only when heading to the wall and near it
+	case (X =< ?SPIKE_HEIGHT/5 andalso NewDirection == left)  orelse (X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/5 andalso NewDirection == right) of
+		true ->
+			case is_bird_touch_wall_spike(Bird, SpikesList) of
+				true  -> game_over(PC_PID);
+				false -> ok
+			end;
 		false -> ok
 	end,
 
@@ -91,15 +97,16 @@ game_over(PC_PID) ->
 
 %% Receive bird location and spikes.
 %% Return true if bird disqualified and otherwise false
-is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList) ->
+is_bird_touch_wall_spike(_Bird=#bird{x=_X, y=Y}, SpikesList) ->
 %%	io:format("\n\nX=~p, Y=~p", [X, Y]),
-	case X =< ?SPIKE_HEIGHT/4 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/4 of	% bird is near the wall
-		false -> false;			% bird still in the game
-		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
+%%	case X =< ?SPIKE_HEIGHT/5 orelse X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT/5 of	% bird is near the wall
+%%		false -> false;				% bird still in the game
+%%		true  ->
+			case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
 					 0 -> false;	% bird still in the game because there is no spike near
-					 1 -> true	% bird disqualified
-				 end
-	end.
+					 1 -> true		% bird disqualified
+				 end.
+%%	end.
 
 %% Gets a height Y and returns the closest spike's index
 closest_spike(Y) ->
