@@ -91,10 +91,10 @@
 }).
 
 -record(neuron_data, {
-		acc = 0,			% accumulator (z/Z)
-		weights = #{},		% input weights (w/W)
-		bias = 0,			% bias (b/B)
-		activation = tanh,	% activation function (a/A)
+		acc = 0,			% accumulator (Z)
+		weights = #{},		% input weights (W)
+		bias = 0,			% bias (B)
+		activation = tanh,	% activation function (A)
 		remInPIDs = [],		% remaining input neuron PIDs. Change during the calculation (because of deleting)
 		origInPIDs = [],	% original input neuron PIDs. Doesn't change
 		outPIDs = []		% output neuron PIDs
