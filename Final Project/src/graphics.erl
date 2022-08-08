@@ -119,7 +119,7 @@ handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcLis
 		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
 		play_NEAT -> todo
 	end,
-	{noreply, State#graphics_state{curr_state = CurrState}};
+	{noreply, State#graphics_state{curr_state=CurrState}};	% only after all birds had initialized, the graphics_state changes its state.
 
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
 %%	io:format("~p~p~n", [X, Direction]),
@@ -143,8 +143,8 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 																							  spikesList = SpikesList, score=Score, bestScore=BestScore}) ->
 %%	io:format("a "),
 	NewState = case ID of
-				   ?ButtonStartUserID -> wxSizer:show(UiSizer, JumpSizer, []),
-										 wxSizer:hide(UiSizer, StartSizer, []),
+				   ?ButtonStartUserID -> wxSizer:hide(UiSizer, StartSizer, []),
+										 wxSizer:show(UiSizer, JumpSizer, []),
 										 wxSizer:layout(MainSizer),
 										 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
@@ -267,11 +267,11 @@ simulate_x_movement(X, Direction) ->
 	end.
 
 
-init_spike_list() -> [0,0,1,0,0,0,0,0,0,0].
+init_spike_list() -> lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)).
 
 %% Wrap function. Creates a random spikes list with exactly TotalSpikes spikes
 create_spikes_list(TotalSpikes) ->
-	create_spikes_list(lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)), 0, TotalSpikes).
+	create_spikes_list(init_spike_list(), 0, TotalSpikes).
 
 
 %% Creates a random spikes list with exactly TotalSpikes spikes
