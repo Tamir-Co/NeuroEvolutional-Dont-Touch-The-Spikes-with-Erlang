@@ -15,6 +15,7 @@
 
 %% Spikes:
 -define(MAX_SPIKES_AMOUNT, 10).
+-define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
 -define(SPIKE_WIDTH, 36).
 -define(SPIKE_HEIGHT, 25).
 -define(SPIKE_HEIGHT_4, 6).
@@ -75,6 +76,7 @@
 		bestScore = 0,
 		curr_state,
 		spikesList,
+		spikesAmount = 1,
 		pcList
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
@@ -87,3 +89,14 @@
 		pc_pid,
 		spikesList
 }).
+
+-record(neuron_data, {
+		acc = 0,			% accumulator (z/Z)
+		weights = #{},		% input weights (w/W)
+		bias = 0,			% bias (b/B)
+		activation = tanh,	% activation function (a/A)
+		remInPIDs = [],		% remaining input neuron PIDs. Change during the calculation (because of deleting)
+		origInPIDs = [],	% original input neuron PIDs. Doesn't change
+		outPIDs = []		% output neuron PIDs
+}).
+

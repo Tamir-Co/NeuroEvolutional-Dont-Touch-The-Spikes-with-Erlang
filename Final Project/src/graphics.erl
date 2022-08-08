@@ -16,9 +16,15 @@
 
 -export([start/0]).
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2, handle_cast/2]).
--export([sound/0]).
+-export([sound/0, test/0]).
 
 -define(SERVER, ?MODULE).
+
+test() ->
+%%	io:format("insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]: ~p~n", [insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]),
+	io:format("create_spikes_list(2, [0,0,0,0,0,0,0,0,0,0])] : ~p~n", [create_spikes_list([0,0,0,0,0,0,0,0,0,0], 0, 1)]).
+
+
 
 start() ->
 	wx_object:start({local,?SERVER}, ?MODULE, [], []).
@@ -30,11 +36,7 @@ init(_Args) ->
 	Panel = wxPanel:new(Frame, [{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
 	wxPanel:setBackgroundColour(Panel, {235,235,235}),
 	
-	%DC = wxPaintDC:new(Panel),
-	%wxDC:setB
-	%wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
 	Brush = wxBrush:new({128,128,128}, [{style, 100}]),
-	%wxDC:setBrush(DC, Brush),
 	
 	ButtonStartUser = wxButton:new(Frame, ?ButtonStartUserID, [{label, "Start (user)"}]),
 	ButtonStartNEAT = wxButton:new(Frame, ?ButtonStartNEATID, [{label, "Start (NEAT)"}]),
@@ -106,7 +108,7 @@ init(_Args) ->
 		bitmapBird_L = BitmapBird_L,
 		bird = #bird{},
 		curr_state = idle,
-		spikesList = [1,0,1,0,0,1,1,0,1,0],
+		spikesList = init_spike_list(),
 		pcList = [BirdServerPID]
 	}}.
 
@@ -128,7 +130,7 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})-
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
 				   play_user -> sound_proc ! "lose_trim",
-					   			State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r};		% we can now goto start simulation
+					   			State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=1};
 				   play_NEAT -> todo, State
 			   end,
 	{noreply, NewState}.
@@ -158,7 +160,6 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 
 				   ?ButtonJumpID	  -> case CurrState of
 											  play_user -> sound_proc ! "jump_trim",
-												  			%io:format("\007\n"), TODO if we want sound: erl -oldshell
 														   gen_server:cast(hd(PC_List), {jump}),
 														   {NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
 														   State#graphics_state{bird_x=NewX, bird_direction=NewDirection};
@@ -186,7 +187,7 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List,
-										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score}) ->  % refresh screen for graphics
+										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->  % refresh screen for graphics
 %%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
 	%io:format("score: ~p", [Score]),
@@ -194,20 +195,22 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
 								wxSizer:layout(MainSizer),
-								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r};	%, score=0
+								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=1, spikesList=init_spike_list()};	%, score=0
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 %%								io:format("~p~p ", [NewX, NewDirection]),
 								case Has_changed_dir of
 									true  -> sound_proc ! "bonus_trim",
-											 NewSpikesList = create_spikeList(),
+											 NewSpikesList = create_spikes_list(SpikesAmount),
 											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
+											 NewSpikesAmount = min(SpikesAmount + 1, ?MAX_RATIONAL_SPIKES_AMOUNT),
 											 NewScore = Score + 1;
 									false -> NewSpikesList = SpikesList,
+											 NewSpikesAmount = SpikesAmount,
 											 NewScore = Score
 								end,
-								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore};
+								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 								
 				  play_NEAT	->  todo,
 								State
@@ -264,15 +267,38 @@ simulate_x_movement(X, Direction) ->
 	end.
 
 
-create_spikeList() ->
-	SpikeProb = 50,
-	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
-%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
-	SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-	SpikesList
-	%,[1,1,1,1,1,1,1,1,1,1]
+init_spike_list() -> [0,0,1,0,0,0,0,0,0,0].
+
+%% Wrap function. Creates a random spikes list with exactly TotalSpikes spikes
+create_spikes_list(TotalSpikes) ->
+	create_spikes_list(lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)), 0, TotalSpikes).
+
+
+%% Creates a random spikes list with exactly TotalSpikes spikes
+create_spikes_list(SpikesList, TotalSpikes, TotalSpikes) -> SpikesList;
+create_spikes_list(SpikesList, SpikesCreated, TotalSpikes) ->
+	SpikeIdx = rand:uniform(?MAX_SPIKES_AMOUNT-SpikesCreated),	% [1,10] -> [1,1]
+	create_spikes_list(insert_spike(SpikesList, SpikeIdx), SpikesCreated+1, TotalSpikes).
+
+
+%% Insert the spike to the list at the given index.
+%% Skip 1's at the inserting
+insert_spike(SpikesList, 1) -> [1|SpikesList--[0]];	% insert the spike
+insert_spike([IsSpike|Spikes_T], SpikeIdx) ->
+	case IsSpike of
+		1 -> [IsSpike|insert_spike(Spikes_T, SpikeIdx)];	% skip
+		0 -> [IsSpike|insert_spike(Spikes_T, SpikeIdx-1)]	% don't skip
+	end
 	.
+
+
+%%create_spikeList() ->
+%%	SpikeProb = 50,
+%%	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+%%	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
+%%%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
+%%	SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+%%	SpikesList.
 
 
 draw_wall_spikes(_, [], _, _) -> ok;
