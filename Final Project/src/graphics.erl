@@ -21,8 +21,8 @@
 -define(SERVER, ?MODULE).
 
 test() ->
-	io:format("insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]: ~p~n", [insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]).
-%%	io:format("create_spikes_list(2, [0,0,0,0,0,0,0,0,0,0])] : ~p~n", [create_spikes_list([0,0,0,0,0,0,0,0,0,0], 0, 1)]).
+%%	io:format("insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]: ~p~n", [insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]).
+	io:format("create_spikes_list(2, [0,0,0,0,0,0,0,0,0,0])] : ~p~n", [create_spikes_list([0,0,0,0,0,0,0,0,0,0], 0, 1)]).
 
 
 
