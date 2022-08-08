@@ -109,7 +109,7 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
 
 %% Gets a height Y and returns the closest spike's index
 closest_spike(Y) ->
-	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP,
+	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP_Y,
 	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
 
 

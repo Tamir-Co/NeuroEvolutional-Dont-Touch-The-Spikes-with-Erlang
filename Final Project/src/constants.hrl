@@ -13,15 +13,23 @@
 -define(BG_WIDTH, 400).
 -define(BG_HEIGHT, 700).
 
+%% Spikes:
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(SPIKE_WIDTH, 36).
 -define(SPIKE_HEIGHT, 25).
 -define(SPIKE_HEIGHT_4, 6).
 -define(SPIKE_HALF_WIDTH, 18).
--define(SPIKE_GAP, 13).
+-define(SPIKE_GAP_Y, 13).
 -define(SPIKES_TOP_Y, 100).
--define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120).
 
+-define(SPIKES_LEFT_X, 22).
+-define(SPIKE_GAP_X, 4).
+-define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120). % TODO need this?
+-define(TOP_RECT_HEIGHT, 70).
+-define(BOTTOM_RECT_Y, 610). %?BG_HEIGHT-120
+-define(BOTTOM_RECT_HEIGHT, 90).
+
+%% Bird:
 -define(BIRD_WIDTH, 50).
 -define(BIRD_HEIGHT, 34).
 
@@ -30,6 +38,7 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
+%% UI IDs:
 -define(ButtonStartUserID, 10).
 -define(ButtonStartNEATID, 11).
 -define(ButtonJumpID, 12).
@@ -50,6 +59,7 @@
 -record(graphics_state, {
 		frame,
 		panel,
+		brush,
 		textScore,
 		mainSizer,
 		uiSizer,

@@ -29,6 +29,13 @@ init(_Args) ->
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
 	Panel = wxPanel:new(Frame, [{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
 	wxPanel:setBackgroundColour(Panel, {235,235,235}),
+	
+	%DC = wxPaintDC:new(Panel),
+	%wxDC:setB
+	%wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
+	Brush = wxBrush:new({128,128,128}, [{style, 100}]),
+	%wxDC:setBrush(DC, Brush),
+	
 	ButtonStartUser = wxButton:new(Frame, ?ButtonStartUserID, [{label, "Start (user)"}]),
 	ButtonStartNEAT = wxButton:new(Frame, ?ButtonStartNEATID, [{label, "Start (NEAT)"}]),
 	ButtonJump = wxButton:new(Frame, ?ButtonJumpID, [{label, "Jump"}]),
@@ -88,6 +95,7 @@ init(_Args) ->
 	{Frame, #graphics_state{
 		frame = Frame,
 		panel = Panel,
+		brush = Brush,
 		textScore = TxtScore,
 		mainSizer = MainSizer,
 		uiSizer = UiSizer,
@@ -214,26 +222,28 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 
 %% =================================================================
 
-handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, bitmapBG=BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, 
+handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, 
 													bird=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
 %%	io:format("c "),											  ^, x=_X, direction=_Direction
-
+	
 	DC = wxPaintDC:new(Panel),
-	wxDC:clear(DC),
-	wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
+	%wxDC:clear(DC),
+	%wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	case Direction of
 		r -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
 		l -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
 	end,
 	
 	wxStaticText:setLabel(TxtScore, "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
-
-	wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
-	wxDC:setBrush(DC, wxBrush:new({128,128,128}, [{style, 100}])),
-	draw_spikes(DC, SpikesList, 100, Direction),
-
-%%	wxBitmap:destroy(BitmapBird),
-%%	wxBitmap:destroy(BitmapBG),
+	
+	wxDC:setPen(DC, ?wxTRANSPARENT_PEN),
+	%wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
+	wxDC:setBrush(DC, Brush),
+	wxDC:drawRectangle(DC, {0, 0, ?BG_WIDTH, ?TOP_RECT_HEIGHT}),
+	wxDC:drawRectangle(DC, {0, ?BOTTOM_RECT_Y, ?BG_WIDTH, ?BOTTOM_RECT_HEIGHT}),
+	draw_top_bottom_spikes(DC, ?SPIKES_LEFT_X, ?MAX_SPIKES_AMOUNT-1),
+	draw_wall_spikes(DC, SpikesList, ?SPIKES_TOP_Y, Direction),
+	
 	wxPaintDC:destroy(DC);
 handle_sync_event(_Event, _, State) ->
 	{noreply, State}.
@@ -260,20 +270,31 @@ create_spikeList() ->
 	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
 %%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
 	SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-	SpikesList.
+	SpikesList
+	%,[1,1,1,1,1,1,1,1,1,1]
+	.
 
 
-draw_spikes(_, [], _, _) -> ok;
-draw_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y, Direction) ->
+draw_wall_spikes(_, [], _, _) -> ok;
+draw_wall_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y, Direction) ->
 	case IsSpike of
 		1 -> 
 			case Direction of
 				r -> wxDC:drawPolygon(DC, [{?BG_WIDTH, CurrSpike_Y}, {?BG_WIDTH-?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {?BG_WIDTH, CurrSpike_Y+?SPIKE_WIDTH}]);
-				l  -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}])
+				l -> wxDC:drawPolygon(DC, [{0, CurrSpike_Y}, {?SPIKE_HEIGHT, CurrSpike_Y+?SPIKE_HALF_WIDTH}, {0, CurrSpike_Y+?SPIKE_WIDTH}])
 			end;
 		0 -> no_spike
 	end,
-	draw_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP, Direction).
+	draw_wall_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP_Y, Direction).
+
+
+draw_top_bottom_spikes(_, _, 0) -> ok;
+draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
+	Center_of_spike = CurrSpike_X + ?SPIKE_HALF_WIDTH,
+	End_of_spike_X = CurrSpike_X + ?SPIKE_WIDTH,
+	wxDC:drawPolygon(DC, [{CurrSpike_X, ?TOP_RECT_HEIGHT}, {Center_of_spike, ?TOP_RECT_HEIGHT+?SPIKE_HEIGHT}, {End_of_spike_X, ?TOP_RECT_HEIGHT}]),
+	wxDC:drawPolygon(DC, [{CurrSpike_X, ?BOTTOM_RECT_Y}, {Center_of_spike, ?BOTTOM_RECT_Y-?SPIKE_HEIGHT}, {End_of_spike_X, ?BOTTOM_RECT_Y}]),
+	draw_top_bottom_spikes(DC, End_of_spike_X+?SPIKE_GAP_X, Spikes_amount-1).
 
 %% ==============================
 init_system() ->
@@ -281,9 +302,11 @@ init_system() ->
 	{ok, BirdServerPID} = pc_bird_server:start(PC_Name),	% init pc bird server
 	BirdServerPID.
 
+
 %% os:cmd("aplay sounds/lose.wav")
 sound() ->
 	receive
 		SoundName -> SoundName%os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
 	end,
 	sound().
+
