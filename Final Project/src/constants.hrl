@@ -34,6 +34,7 @@
 -define(BIRD_WIDTH, 50).
 -define(BIRD_HEIGHT, 34).
 
+-define(GRAVITY, 2).
 -define(JUMP_VELOCITY, 15).
 -define(X_VELOCITY, 7).
 -define(BIRD_START_X, 180).
@@ -44,19 +45,13 @@
 -define(ButtonStartNEATID, 11).
 -define(ButtonJumpID, 12).
 
--define(Timer, 60).		% Graphics update timer
+-define(TIMER, 60).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
 -define(NUM_OF_BIRDS, 1000).
 
 
 %% RECORDS %%
--record(pc_bird_server_state, {
-	pcName,
-	curr_state = idle,
-	birdList
-}).
-
 -record(graphics_state, {
 		frame,
 		panel,
@@ -81,13 +76,26 @@
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 
+-record(pc_bird_server_state, {
+	pcName,
+	graphicState = idle,
+	birdList
+}).
+
 -record(bird, {
 		x = ?BIRD_START_X,
 		y = ?BIRD_START_Y,
 		velocityY = 0,
 		direction = r,
 		pc_pid,
-		spikesList
+		spikesList,
+		nnPID,
+		graphicState
+}).
+
+-record(nn_data, {
+		networkStructure,   % [L1, L2, ...]
+		weightsList
 }).
 
 -record(neuron_data, {

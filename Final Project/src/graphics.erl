@@ -80,7 +80,7 @@ init(_Args) ->
 %%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
 
 	wxFrame:show(Frame),
-	erlang:send_after(?Timer, self(), timer),
+	erlang:send_after(?TIMER, self(), timer),
 
 	wxPanel:connect(Panel, paint, [callback]),
 	wxFrame:connect(Frame, close_window),
@@ -117,7 +117,8 @@ init(_Args) ->
 handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcList = PC_List})->
 	case CurrState of
 		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
-		play_NEAT -> todo
+		play_NEAT -> todo,
+					 gen_server:cast(hd(PC_List), {start_simulation})		% we can now goto start simulation
 	end,
 	{noreply, State#graphics_state{curr_state=CurrState}};	% only after all birds had initialized, the graphics_state changes its state.
 
@@ -161,10 +162,10 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 				   ?ButtonJumpID	  -> case CurrState of
 											  play_user -> sound_proc ! "jump_trim",
 														   gen_server:cast(hd(PC_List), {jump}),
-														   {NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
-														   State#graphics_state{bird_x=NewX, bird_direction=NewDirection};
-											  play_NEAT -> todo, State;
-											  idle -> void, State
+														   %%{NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
+														   State;
+											  play_NEAT -> State;
+											  idle ->      State
 										  end
 			   end,
 	{noreply, NewState};
@@ -204,7 +205,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 									true  -> sound_proc ! "bonus_trim",
 											 NewSpikesList = create_spikes_list(SpikesAmount),
 											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-											 NewSpikesAmount = min(SpikesAmount + 1, ?MAX_RATIONAL_SPIKES_AMOUNT),
+											 NewSpikesAmount = min(SpikesAmount + 1, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
 											 NewScore = Score + 1;
 									false -> NewSpikesList = SpikesList,
 											 NewSpikesAmount = SpikesAmount,
@@ -212,11 +213,24 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 								end,
 								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 								
-				  play_NEAT	->  todo,
-								State
+				  play_NEAT	->  todo,      % TODO hd(PC_List) all code!!
+					            gen_server:cast(hd(PC_List), {simulate_frame}),
+					            {NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+					            case Has_changed_dir of
+									  true  ->
+										  NewSpikesList = create_spikes_list(SpikesAmount),
+										  gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
+										  NewSpikesAmount = min(SpikesAmount + 1, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+										  NewScore = Score + 1;
+									  false ->
+										  NewSpikesList = SpikesList,
+										  NewSpikesAmount = SpikesAmount,
+										  NewScore = Score
+					            end,
+					            State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount}
 			  end,
 
-	erlang:send_after(?Timer, self(), timer),	% set new timer
+	erlang:send_after(?TIMER, self(), timer),	% set new timer
 %%	io:format("NewState ~p", [NewState]),
 	{noreply, NewState};
 
