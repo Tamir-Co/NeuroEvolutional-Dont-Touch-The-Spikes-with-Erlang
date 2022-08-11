@@ -225,10 +225,8 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 %% =================================================================
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, 
 													bird=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
-%%	io:format("c "),											  ^, x=_X, direction=_Direction
 	
 	DC = wxPaintDC:new(Panel),
-	%wxDC:clear(DC),
 	%wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	case Direction of
 		r -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
@@ -238,7 +236,6 @@ handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel
 	wxStaticText:setLabel(TxtScore, "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
 	
 	wxDC:setPen(DC, ?wxTRANSPARENT_PEN),
-	%wxDC:setPen(DC, wxPen:new({128,128,128}, [{style, 100}])),
 	wxDC:setBrush(DC, Brush),
 	wxDC:drawRectangle(DC, {0, 0, ?BG_WIDTH, ?TOP_RECT_HEIGHT}),
 	wxDC:drawRectangle(DC, {0, ?BOTTOM_RECT_Y, ?BG_WIDTH, ?BOTTOM_RECT_HEIGHT}),

@@ -15,13 +15,14 @@
 
 %% =================================================================
 init(NetworkStructure) ->
+%%	N_PID_LayerMap = construct_network(NetworkStructure),
 	loop(#nn_data{networkStructure=NetworkStructure}).
 
-loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsList=WeightsList}) ->
+loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap}) ->
 	receive
-		{set_weights, NewWeightsList} ->
+		{set_weights, NewWeightsMap} ->
 				todo,
-				loop(NN_Data#nn_data{weightsList=NewWeightsList});
+				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 
 		{decide_jump, From, BirdHeight, BirdWallDistance, SpikesList} ->    % TODO send fewer SpikesList
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
@@ -32,16 +33,17 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsList=WeightsL
 
 		{get_weights, From} ->
 				todo,
-				From ! WeightsList,
+				From ! WeightsMap,
 				loop(NN_Data)
 	end.
 
 %% Feed-forward the input game data, and using the nn_data to determine whether to jump right now
-decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsList=_WeightsList},
+decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=_WeightsMap},
 			_BirdHeight, BirdWallDistance, _SpikesList) ->
 	Self = self(),
 	Weights = #{Self=>0.1},
-	N_PID = spawn_link(fun() -> neuron:init(Weights, -19.5, tanh, [Self], [Self]) end),   % TODO move to init
+	N_PID = spawn_link(fun() -> neuron:init() end),   % TODO move to init
+	N_PID ! {configure_neuron, Weights, -19.8, tanh, [Self], [Self]},
 	N_PID ! {neuron, Self, BirdWallDistance},
 	receive
 		{neuron, N_PID, IsJump} ->

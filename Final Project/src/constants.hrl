@@ -42,7 +42,7 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number
+-define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
 
 %% UI IDs:
 -define(ButtonStartUserID, 10).
@@ -99,7 +99,7 @@
 
 -record(nn_data, {
 		networkStructure,   % [L1, L2, ...]
-		weightsList
+		weightsMap
 }).
 
 -record(neuron_data, {

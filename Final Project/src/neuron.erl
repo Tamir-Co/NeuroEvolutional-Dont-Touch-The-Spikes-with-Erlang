@@ -11,13 +11,14 @@
 -include("constants.hrl").
 
 %% API
--export([test/0, init/5]).
+-export([test/0, init/0]).
 
 %% =================================================================
 % A test function used to test the functionality of the neuron
 test()->
 	Self = self(),
-	PID = spawn(fun()-> init(#{1=>0.1,2=>0.2,3=>0.3}, 7, tanh, [1,2,3], [Self]) end),
+	PID = spawn(fun()-> init() end),
+	PID ! {configure_neuron, #{1=>0.1,2=>0.2,3=>0.3}, 7, tanh, [1,2,3], [Self]},
 	PID ! {neuron, 3, 6},
 	PID ! {neuron, 1, 7},
 	PID ! {neuron, 2, 8},
@@ -25,26 +26,29 @@ test()->
 		M -> io:format("M: ~p~n", [M])
 	end.
 
-init(Weights, Bias, Activation, InPIDs, OutPIDs) ->
-	calc(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs}).
+init() ->
+	receive
+		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
+				calc(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
+	end.
 
 calc(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
 	receive
 		{neuron, From, A} ->
-						case lists:member(From, RemInPIDs) of		% is the sender legal
-							true  -> ok;
-							false -> exit("illegal neuron sender!!!")
-						end,
-						W = maps:get(From, Weights),		% get the relevant input weight
-						Z = Acc + W*A,
-				 		case length(RemInPIDs) > 1 of		% check if the neuron hasn't received all its inputs yet
-							true  -> calc(#neuron_data{	acc=Z, weights=Weights, bias=Bias, activation=Activation,
-														origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
-							false -> MyA = activation_func(Activation, Z + Bias),
-									 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
-									 calc(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
-										 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
-				 		end
+				case lists:member(From, RemInPIDs) of		% is the sender legal
+					true  -> ok;
+					false -> exit("illegal neuron sender!!!")
+				end,
+				W = maps:get(From, Weights),		% get the relevant input weight
+				Z = Acc + W*A,
+				case length(RemInPIDs) > 1 of		% check if the neuron hasn't received all its inputs yet
+					true  -> calc(#neuron_data{	acc=Z, weights=Weights, bias=Bias, activation=Activation,
+												origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
+					false -> MyA = activation_func(Activation, Z + Bias),
+							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
+							 calc(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
+								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
+				end
 	end.
 
 %% =================================================================
