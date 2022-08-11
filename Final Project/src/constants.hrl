@@ -44,6 +44,10 @@
 
 -define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
 
+%% Neural network:
+-define(NN_STRUCTURE, [12, 6, 1]).
+
+
 %% UI IDs:
 -define(ButtonStartUserID, 10).
 -define(ButtonStartNEATID, 11).
@@ -101,6 +105,7 @@
 
 -record(nn_data, {
 	networkStructure,   % [L1, L2, ...]
+	n_PIDsLayersMap,
 	weightsMap
 }).
 

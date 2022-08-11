@@ -43,8 +43,8 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 %%			undefined;
 		
 		play_NEAT ->
-			NN_PID = spawn_link(fun() -> neural_network:init([1]) end), % TODO
-			NN_PID ! {set_weights, #{}},
+			NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end),
+%%			NN_PID ! {set_weights}, % TODO
 			{next_state, simulation, Bird#bird{nnPID=NN_PID}}
 	end.
 
