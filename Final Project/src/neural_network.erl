@@ -15,10 +15,11 @@
 
 %% =================================================================
 init(NetworkStructure) ->
-	N_PIDsLayersMap = construct_NN(NetworkStructure),
+	{N_PIDsList, N_PIDsLayersMap} = construct_NN(NetworkStructure),
 	WeightsMap = rand_weights(N_PIDsLayersMap),
-	io:format("WeightsMap ~p~n", [WeightsMap]),
-	configure_NN(WeightsMap, [todo]),
+	io:format("WeightsMap ~p~n~n", [WeightsMap]),
+	io:format("self ~p~n", [self()]),
+	configure_NN(WeightsMap, N_PIDsList),
 	io:format("N_PIDsLayersMap ~p~n", [N_PIDsLayersMap]),
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap}).
 
@@ -44,10 +45,10 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 construct_NN(NetworkStructure) ->
 	construct_NN(NetworkStructure, #{}, [], 1).
 
-construct_NN([], N_PIDsLayersMap, _LayerIdx) -> N_PIDsLayersMap#{ {layer, 0} => [self()] };     % add the NN module to the 0 layer for later convenient
-construct_NN([NeuronsAmount|NetworkStructureT], N_PIDsLayersMap, LayerIdx) ->
+construct_NN([], N_PIDsLayersMap, N_PIDsList, _LayerIdx) -> { N_PIDsList, N_PIDsLayersMap#{{layer, 0} => [self()]} };     % add the NN module to the 0 layer for later convenient
+construct_NN([NeuronsAmount|NetworkStructureT], N_PIDsLayersMap, N_PIDsList, LayerIdx) ->
 	PIDs = construct_neurons(NeuronsAmount, []),
-	construct_NN(NetworkStructureT, N_PIDsLayersMap#{ {layer, LayerIdx} => PIDs }, LayerIdx+1).
+	construct_NN(NetworkStructureT, N_PIDsLayersMap#{ {layer, LayerIdx} => PIDs }, N_PIDsList ++ PIDs, LayerIdx+1).
 
 %% Create NeuronsAmount neurons and return list of their PIDs
 construct_neurons(0, PIDs) -> PIDs;
@@ -56,12 +57,12 @@ construct_neurons(NeuronsAmount, PIDs) ->
 
 %% Create random weights and biases
 rand_weights(N_PIDsLayersMap) ->
-	rand_weights(N_PIDsLayersMap, #{}, 1, length(?NN_STRUCTURE)).
+	rand_weights(N_PIDsLayersMap, #{}, 1, length(?NN_STRUCTURE)+1).
 
-rand_weights(_N_PIDsLayersMap, WeightsMap, NumOfLayers, NumOfLayers) -> WeightsMap;
-rand_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NumOfLayers) ->
+rand_weights(_N_PIDsLayersMap, WeightsMap, NumOfLayers_1, NumOfLayers_1) -> WeightsMap;
+rand_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NumOfLayers_1) ->
 	NewWeightsMap = rand_layer_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, lists:nth(LayerIdx+1, [1|?NN_STRUCTURE])),  % add (temporary) the NN module to the NN structure
-	rand_weights(N_PIDsLayersMap, NewWeightsMap, LayerIdx+1, NumOfLayers).
+	rand_weights(N_PIDsLayersMap, NewWeightsMap, LayerIdx+1, NumOfLayers_1).
 
 rand_layer_weights(_N_PIDsLayersMap, WeightsMap, _LayerIdx, 0) -> WeightsMap;
 rand_layer_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx) ->
@@ -84,18 +85,24 @@ rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx) ->
 
 %% Configure all the neurons within the neural network using the WeightsMap
 configure_NN(_WeightsMap, []) -> void;
+configure_NN(WeightsMap, [LastNeuronPID]) ->
+	Weights = extract_weights(WeightsMap, LastNeuronPID),
+	Bias    = maps:get({bias, LastNeuronPID}, WeightsMap),
+	InPIDs  = [LeftNeuronPID  || {weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID],
+	OutPIDs = [self()],
+	LastNeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs};
 configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
 	Weights = extract_weights(WeightsMap, NeuronPID),
-	Bias = maps:get({bias, NeuronPID}, WeightsMap),
-	InPIDs  = [LeftNeuronPID  || {weight, LeftNeuronPID,  NeuronPID} <- maps:keys(WeightsMap)],
-	OutPIDs = [RightNeuronPID || {weight, NeuronPID, RightNeuronPID} <- maps:keys(WeightsMap)],
+	Bias    = maps:get({bias, NeuronPID}, WeightsMap),
+	InPIDs  = [LeftNeuronPID  || {weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
+	OutPIDs = [RightNeuronPID || {weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID == NeuronPID],
 	NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs},
 	configure_NN(WeightsMap, NeuronPID_T).
 
 %% Extract from WeightsMap the relevant weights that inputs to NeuronPID, and return them in a map
 extract_weights(WeightsMap, NeuronPID) ->   % WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight }
 	WeightsMapNeuron = #{},
-	hd([WeightsMapNeuron#{ LeftNeuronPID => maps:get(Key, WeightsMap) } || Key={weight, LeftNeuronPID, NeuronPID} <- maps:keys(WeightsMap)])
+	maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID])
 	% #{ LeftNeuronPID => Weight }
 	.
 
@@ -107,7 +114,7 @@ decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, n_PIDsLayers
 	receive
 		{neuron, OutputNeuronPID, IsJump} ->
 				io:format("BirdWallDistance: ~p,IsJump: ~p~n", [BirdWallDistance, IsJump]),
-				case IsJump > 0.5 of
+				case IsJump > 0 of
 					true  -> true;    % jump
 					false -> false
 				end
