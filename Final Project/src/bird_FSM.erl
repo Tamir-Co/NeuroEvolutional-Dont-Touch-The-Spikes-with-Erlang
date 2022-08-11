@@ -36,13 +36,17 @@ callback_mode() ->
 % {keep_state, #bird{}}.
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
-		play_user ->
-			NN_PID = undefined;
+		idle ->
+			{next_state, simulation, Bird#bird{graphicState=play_user}};    % graphics init this bird from the beginning
+			
+%%		play_user ->
+%%			undefined;
+		
 		play_NEAT ->
 			NN_PID = spawn_link(fun() -> neural_network:init([1]) end), % TODO
-			NN_PID ! {set_weights, #{}}
-	end,
-	{next_state, simulation, Bird#bird{nnPID=NN_PID}}.
+			NN_PID ! {set_weights, #{}},
+			{next_state, simulation, Bird#bird{nnPID=NN_PID}}
+	end.
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
 	{keep_state, Bird#bird{spikesList = SpikesList}};
@@ -52,13 +56,16 @@ simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID, spikesList=_SpikesList}) ->
 	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird};
 simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesList, graphicState=play_user}) ->     % play_user
-	NextBird = simulate_next_frame_bird(Bird, SpikesList),
-	#bird{x=X, y=Y, direction=Direction} = NextBird,
-	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
-	{keep_state, NextBird};
+	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
+	case IsDead of
+		true  -> {next_state, idle, #bird{pc_pid=PC_PID}};
+		false -> #bird{x=X, y=Y, direction=Direction} = NextBird,
+				 gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
+				 {keep_state, NextBird}
+	end;
 simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesList, graphicState=play_NEAT}) ->     % play_NEAT
 	run_NN(Bird),
-	NextBird = simulate_next_frame_bird(Bird, SpikesList),
+	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
 	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird}.
@@ -78,19 +85,14 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 		{l, false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
 	end,
 
-	%% check if the bird touching top/bottom spikes
-	case Y >= ?SPIKES_BOTTOM_Y orelse Y =< ?SPIKES_TOP_Y of
-		true  -> game_over(PC_PID, top_bottom);
+	%% check if the bird touching top/bottom spikes, or bird touching wall spikes (only when heading to the wall and near it)
+	IsDead = Y >= ?SPIKES_BOTTOM_Y orelse Y =< ?SPIKES_TOP_Y orelse is_bird_touch_wall_spike(Bird, SpikesList, NewDirection),
+	 case IsDead of
+		true  -> game_over(PC_PID);
 		false -> ok
 	end,
-
-	%% check if the bird touching wall spikes, only when heading to the wall and near it
-	case is_bird_touch_wall_spike(Bird, SpikesList, NewDirection) of
-		true  -> game_over(PC_PID, wall);
-		false -> ok
-	end,
-
-	Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+?GRAVITY*?TIME_UNIT, direction=NewDirection}.   % TODO check mult (*)
+	
+	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+?GRAVITY*?TIME_UNIT, direction=NewDirection}}.   % TODO check mult (*)
 
 
 run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=SpikesList}) ->
@@ -100,10 +102,10 @@ run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=Spi
 	end.
 
 
-game_over(PC_PID, Reason) ->
+game_over(PC_PID) ->
 	gen_server:cast(PC_PID, {bird_disqualified, self()}),
-	io:format("~nGame Over! touch the ~p~n",[Reason]),
-	terminate(normal, undefined, undefined).
+	io:format("Game Over!~n").
+%%	terminate(normal, undefined, undefined).
 
 %% Receive bird location and spikes.
 %% Return true if bird disqualified and otherwise false

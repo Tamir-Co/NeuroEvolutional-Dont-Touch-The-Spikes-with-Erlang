@@ -47,10 +47,6 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{birdList = Bi
 	msg_all_birds(BirdList, {spikes_list, SpikesList}, false),
 	{noreply, State};
 
-handle_cast({jump}, State=#pc_bird_server_state{birdList = BirdList, graphicState = play_user}) ->
-	gen_statem:cast(hd(BirdList), {jump}),
-	{noreply, State};
-
 handle_cast({simulate_frame}, State=#pc_bird_server_state{birdList = BirdList}) ->
 	gen_statem:cast(hd(BirdList), {simulate_frame}),
 	{noreply, State};
@@ -61,7 +57,7 @@ handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
 
 handle_cast({bird_disqualified, BirdPID}, State=#pc_bird_server_state{graphicState=GraphicState, birdList = BirdList}) ->
 	wx_object:cast(graphics, {bird_disqualified, BirdPID}),
-	{noreply, State#pc_bird_server_state{graphicState = check_state(BirdList, GraphicState), birdList = BirdList -- [BirdPID]}}.
+	{noreply, State#pc_bird_server_state{graphicState = check_state(BirdList, GraphicState)}}.
 
 %% =================================================================
 %% Start all bird FSMs and return the new bird list

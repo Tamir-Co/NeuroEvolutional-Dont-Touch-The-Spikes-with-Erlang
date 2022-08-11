@@ -57,26 +57,28 @@
 
 %% RECORDS %%
 -record(graphics_state, {
-		frame,
-		panel,
-		brush,
-		textScore,
-		mainSizer,
-		uiSizer,
-		startSizer,
-		jumpSizer,
-		bitmapBG,
-		bitmapBird_R,
-		bitmapBird_L,
-		bird,	% TODO change to birdList
-		bird_x = ?BIRD_START_X,
-		bird_direction = r,
-		score = 0,
-		bestScore = 0,
-		curr_state,
-		spikesList,
-		spikesAmount = 1,
-		pcList
+	frame,
+	panel,
+	brush,
+	textScore,
+	mainSizer,
+	uiSizer,
+	startSizer,
+	jumpSizer,
+	bitmapBG,
+	bitmapBird_R,
+	bitmapBird_L,
+	birdUser,
+	birdUserPID,
+	birdList,
+	bird_x = ?BIRD_START_X,
+	bird_direction = r,
+	score = 0,
+	bestScore = 0,
+	curr_state,
+	spikesList,
+	spikesAmount = 1,
+	pcList
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 
@@ -87,28 +89,27 @@
 }).
 
 -record(bird, {
-		x = ?BIRD_START_X,
-		y = ?BIRD_START_Y,
-		velocityY = 0,
-		direction = r,
-		pc_pid,
-		spikesList,
-		nnPID,
-		graphicState
+	x = ?BIRD_START_X,
+	y = ?BIRD_START_Y,
+	velocityY = 0,
+	direction = r,
+	pc_pid,
+	spikesList = lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+	nnPID,
+	graphicState = idle
 }).
 
 -record(nn_data, {
-		networkStructure,   % [L1, L2, ...]
-		weightsMap
+	networkStructure,   % [L1, L2, ...]
+	weightsMap
 }).
 
 -record(neuron_data, {
-		acc = 0,			% accumulator (Z)
-		weights = #{},		% input weights (W)
-		bias = 0,			% bias (B)
-		activation = tanh,	% activation function (A)
-		remInPIDs = [],		% remaining input neuron PIDs. Change during the calculation (because of deleting)
-		origInPIDs = [],	% original input neuron PIDs. Doesn't change
-		outPIDs = []		% output neuron PIDs
+	acc = 0,			% accumulator (Z)
+	weights = #{},		% input weights (W)
+	bias = 0,			% bias (B)
+	activation = tanh,	% activation function (A)
+	remInPIDs = [],		% remaining input neuron PIDs. Change during the calculation (because of deleting)
+	origInPIDs = [],	% original input neuron PIDs. Doesn't change
+	outPIDs = []		% output neuron PIDs
 }).
-
