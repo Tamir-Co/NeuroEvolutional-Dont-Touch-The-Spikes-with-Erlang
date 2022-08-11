@@ -17,10 +17,10 @@
 init(NetworkStructure) ->
 	{N_PIDsList, N_PIDsLayersMap} = construct_NN(NetworkStructure),
 	WeightsMap = rand_weights(N_PIDsLayersMap),
-	io:format("WeightsMap ~p~n~n", [WeightsMap]),
-	io:format("self ~p~n", [self()]),
+%%	io:format("WeightsMap ~p~n~n", [WeightsMap]),
+%%	io:format("self ~p~n", [self()]),
 	configure_NN(WeightsMap, N_PIDsList),
-	io:format("N_PIDsLayersMap ~p~n", [N_PIDsLayersMap]),
+%%	io:format("N_PIDsLayersMap ~p~n", [N_PIDsLayersMap]),
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap}).
 
 loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap}) ->

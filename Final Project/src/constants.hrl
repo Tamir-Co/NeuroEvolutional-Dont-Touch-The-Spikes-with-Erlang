@@ -45,7 +45,7 @@
 -define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
 
 %% Neural network:
--define(NN_STRUCTURE, [12, 1, 1]).
+-define(NN_STRUCTURE, [12, 6, 1]).
 
 
 %% UI IDs:
