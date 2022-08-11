@@ -15,11 +15,11 @@
 -export([start/1]).
 -export([init/1, handle_call/3, handle_cast/2]).
 
-%% ====================================
+%% =================================================================
 start(PC_Name) ->
 	gen_server:start({local, PC_Name}, ?MODULE, [PC_Name], []).
 
-%% ====================================
+%% =================================================================
 init([PC_Name]) ->
 	{ok, #pc_bird_server_state{
 		pcName = PC_Name,
@@ -63,7 +63,7 @@ handle_cast({bird_disqualified, BirdPID}, State=#pc_bird_server_state{graphicSta
 	wx_object:cast(graphics, {bird_disqualified, BirdPID}),
 	{noreply, State#pc_bird_server_state{graphicState = check_state(BirdList, GraphicState), birdList = BirdList -- [BirdPID]}}.
 
-%% ====================================
+%% =================================================================
 %% Start all bird FSMs and return the new bird list
 start_bird_FSM(0, _PC_Name, _SpikesList, BirdList, _GraphicState) -> BirdList;
 start_bird_FSM(NumOfBirds, PC_Name, SpikesList, BirdList, GraphicState) ->
@@ -82,6 +82,6 @@ msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 %% Check system state by the amount of running birds
 check_state(BirdList, GraphicState) ->
 	case length(BirdList) of
-		0 	  -> idle;		% no birds
+		0 	  -> idle;		    % no birds
 		_Else -> GraphicState	% there are birds
 	end.

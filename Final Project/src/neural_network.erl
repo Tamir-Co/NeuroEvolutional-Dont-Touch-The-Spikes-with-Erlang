@@ -13,7 +13,7 @@
 %% API
 -export([init/1]).
 
-%% ======================================
+%% =================================================================
 init(NetworkStructure) ->
 	loop(#nn_data{networkStructure=NetworkStructure}).
 

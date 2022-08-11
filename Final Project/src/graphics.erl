@@ -16,16 +16,12 @@
 
 -export([start/0]).
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2, handle_cast/2]).
--export([sound/0, test/0]).
+-export([sound/0]).
 
 -define(SERVER, ?MODULE).
 
-test() ->
-%%	io:format("insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]: ~p~n", [insert_spike([0,1,0,0,0,1,0,0,0,0], 7)]).
-	io:format("create_spikes_list(2, [0,0,0,0,0,0,0,0,0,0])] : ~p~n", [create_spikes_list([0,0,0,0,0,0,0,0,0,0], 0, 1)]).
 
-
-
+%% =================================================================
 start() ->
 	wx_object:start({local,?SERVER}, ?MODULE, [], []).
 
@@ -113,7 +109,6 @@ init(_Args) ->
 	}}.
 
 %% =================================================================
-
 handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcList = PC_List})->
 	case CurrState of
 		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
@@ -123,7 +118,6 @@ handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcLis
 	{noreply, State#graphics_state{curr_state=CurrState}};	% only after all birds had initialized, the graphics_state changes its state.
 
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})->
-%%	io:format("~p~p~n", [X, Direction]),
 	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
 	NewState = State#graphics_state{bird=NewBird},
 	{noreply, NewState};
@@ -131,23 +125,20 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{bird=Bird})-
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
 				   play_user -> sound_proc ! "lose_trim",
-					   			State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=1};
+					   			State#graphics_state{curr_state=idle, bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 				   play_NEAT -> todo, State
 			   end,
 	{noreply, NewState}.
 
 %% =================================================================
-
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
-																							  pcList = PC_List, curr_state = CurrState, bird_x=Bird_x, bird_direction=Bird_dir,
+																							  pcList = PC_List, curr_state = CurrState, bird_x=_Bird_x, bird_direction=_Bird_dir,
 																							  spikesList = SpikesList, score=Score, bestScore=BestScore}) ->
-%%	io:format("a "),
 	NewState = case ID of
 				   ?ButtonStartUserID -> wxSizer:hide(UiSizer, StartSizer, []),
 										 wxSizer:show(UiSizer, JumpSizer, []),
 										 wxSizer:layout(MainSizer),
-										 % gen_statem:cast(BirdPID, {start_simulation}),%timer:sleep(50000),
 
 										 % cast pc to init FSM
 										 NumOfBirds = 1,
@@ -155,14 +146,13 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 										 
 										 State#graphics_state{score=0, bestScore=max(BestScore, Score)};
 
-				   ?ButtonStartNEATID -> NumOfBirds = 1,	% TODO change
+				   ?ButtonStartNEATID -> NumOfBirds = ?NUM_OF_BIRDS,
 										 gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT, SpikesList}),
 										 State#graphics_state{score=0};
 
 				   ?ButtonJumpID	  -> case CurrState of
 											  play_user -> sound_proc ! "jump_trim",
 														   gen_server:cast(hd(PC_List), {jump}),
-														   %%{NewDirection, NewX, _} = simulate_x_movement(Bird_x, Bird_dir),
 														   State;
 											  play_NEAT -> State;
 											  idle ->      State
@@ -185,27 +175,23 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 	{noreply, NewState}.
 
 %% =================================================================
-
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List,
 										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->  % refresh screen for graphics
-%%	io:format("b "),
 	wxWindow:refresh(Frame), % refresh screen
-	%io:format("score: ~p", [Score]),
 	NewState = case CurrState of
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
 								wxSizer:show(UiSizer, StartSizer, []),
 								wxSizer:layout(MainSizer),
-								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=1, spikesList=init_spike_list()};	%, score=0
+								State#graphics_state{bird=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=init_spike_list()};	%, score=0
 
 				  play_user -> 	gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-%%								io:format("~p~p ", [NewX, NewDirection]),
 								case Has_changed_dir of
 									true  -> sound_proc ! "bonus_trim",
-											 NewSpikesList = create_spikes_list(SpikesAmount),
+											 NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
 											 gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-											 NewSpikesAmount = min(SpikesAmount + 1, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+											 NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
 											 NewScore = Score + 1;
 									false -> NewSpikesList = SpikesList,
 											 NewSpikesAmount = SpikesAmount,
@@ -218,9 +204,9 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 					            {NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 					            case Has_changed_dir of
 									  true  ->
-										  NewSpikesList = create_spikes_list(SpikesAmount),
+										  NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
 										  gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-										  NewSpikesAmount = min(SpikesAmount + 1, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+										  NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
 										  NewScore = Score + 1;
 									  false ->
 										  NewSpikesList = SpikesList,
@@ -231,14 +217,12 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 			  end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
-%%	io:format("NewState ~p", [NewState]),
 	{noreply, NewState};
 
 handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
 %% =================================================================
-
 handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, 
 													bird=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
 %%	io:format("c "),											  ^, x=_X, direction=_Direction
@@ -269,7 +253,6 @@ handle_sync_event(_Event, _, State) ->
 %%	wxFrame:destroy(State#graphics_state.frame).
 
 %% =================================================================
-
 %% Simulates a x movement of a bird during one frame.
 %% the output is: {NewDirection, NewX, Has_changed_direction}
 simulate_x_movement(X, Direction) ->
@@ -335,7 +318,7 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 	wxDC:drawPolygon(DC, [{CurrSpike_X, ?BOTTOM_RECT_Y}, {Center_of_spike, ?BOTTOM_RECT_Y-?SPIKE_HEIGHT}, {End_of_spike_X, ?BOTTOM_RECT_Y}]),
 	draw_top_bottom_spikes(DC, End_of_spike_X+?SPIKE_GAP_X, Spikes_amount-1).
 
-%% ==============================
+%% =================================================================
 init_system() ->
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
 	{ok, BirdServerPID} = pc_bird_server:start(PC_Name),	% init pc bird server

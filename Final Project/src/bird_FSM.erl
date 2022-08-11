@@ -16,12 +16,12 @@
 -export([init/1, callback_mode/0, terminate/3, stop/0]).
 -export([idle/3, simulation/3]).
 
-% =========================================
+%% =================================================================
 %% Creates a gen_statem process which calls bird_FSM:init/1
 start(Name, PC_PID, SpikesList, GraphicState) ->
 	gen_statem:start({local,Name}, ?MODULE, [PC_PID, SpikesList, GraphicState], []).
 
-% =========================================
+%% =================================================================
 init([PC_PID, SpikesList, GraphicState]) ->
 	{ok, idle, #bird{	pc_pid=PC_PID,
 						spikesList = SpikesList,
@@ -31,7 +31,7 @@ init([PC_PID, SpikesList, GraphicState]) ->
 callback_mode() ->
 	state_functions.
 
-% =========================================
+%% =================================================================
 % idle(enter, _OldState, Bird=#bird{}) ->
 % {keep_state, #bird{}}.
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
@@ -44,7 +44,6 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	end,
 	{next_state, simulation, Bird#bird{nnPID=NN_PID}}.
 
-% =========================================
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
 	{keep_state, Bird#bird{spikesList = SpikesList}};
 simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID, spikesList=_SpikesList}) ->
@@ -65,6 +64,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesLi
 	{keep_state, NextBird}.
 
 
+%% =================================================================
 jump(Bird=#bird{}) ->
 	Bird#bird{velocityY=-?JUMP_VELOCITY}.
 
@@ -123,7 +123,7 @@ closest_spike(Y) ->
 	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
 
 
-% =========================================
+%% =================================================================
 terminate(_Reason, _StateName, _State) ->
 	ok.
 

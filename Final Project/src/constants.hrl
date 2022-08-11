@@ -8,7 +8,7 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
-
+%% Frame structure:
 -define(RIGHT_WALL_X, 350).		% TODO check
 -define(BG_WIDTH, 400).
 -define(BG_HEIGHT, 700).
@@ -16,6 +16,8 @@
 %% Spikes:
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
+-define(ADD_SPIKES_WALL_TOUCH, 0.5).
+-define(INIT_SPIKES_WALL_AMOUNT, 0.5).
 -define(SPIKE_WIDTH, 36).
 -define(SPIKE_HEIGHT, 25).
 -define(SPIKE_HEIGHT_4, 6).
@@ -40,15 +42,17 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
+-define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number
+
 %% UI IDs:
 -define(ButtonStartUserID, 10).
 -define(ButtonStartNEATID, 11).
 -define(ButtonJumpID, 12).
 
+%% Time:
 -define(TIMER, 60).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
--define(NUM_OF_BIRDS, 1000).
 
 
 %% RECORDS %%

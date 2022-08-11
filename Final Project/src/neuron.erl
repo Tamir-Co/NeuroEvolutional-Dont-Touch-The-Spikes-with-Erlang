@@ -13,7 +13,7 @@
 %% API
 -export([test/0, init/5]).
 
-%% ======================================
+%% =================================================================
 % A test function used to test the functionality of the neuron
 test()->
 	Self = self(),
@@ -47,7 +47,7 @@ calc(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 				 		end
 	end.
 
-%% ======================================
+%% =================================================================
 activation_func(tanh, Z) -> math:tanh(Z);
 
 activation_func(sign, 0)-> 0;
