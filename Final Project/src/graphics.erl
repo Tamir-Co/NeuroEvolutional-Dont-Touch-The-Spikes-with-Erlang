@@ -128,7 +128,16 @@ handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = Cu
 	NewState = case CurrState of
 				   play_user -> sound_proc ! "lose_trim",
 					   			State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
-				   play_NEAT -> todo, State
+			   end,
+	{noreply, NewState};
+
+handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_state = CurrState})->
+	NewState = case CurrState of
+				   play_NEAT -> case PCsInSimulation of
+									1 -> pick_best(BestCandBirds ++ CandBirds);
+									Else -> BestCandBirds ++ CandBirds, PCsInSimulation--
+				                end,
+					            State
 			   end,
 	{noreply, NewState}.
 
