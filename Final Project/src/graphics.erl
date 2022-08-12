@@ -107,7 +107,8 @@ init(_Args) ->
 		birdList = [],
 		curr_state = idle,
 		spikesList = init_spike_list(),
-		pcList = [BirdServerPID]
+		pcList = [BirdServerPID],
+		pcsInSimulation = 1     % TODO change to define - the length of PCs list
 	}}.
 
 %% =================================================================
@@ -127,17 +128,20 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{birdUser=Bir
 handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
 				   play_user -> sound_proc ! "lose_trim",
-					   			State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
+					   			State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT}
 			   end,
 	{noreply, NewState};
 
-handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_state = CurrState})->
+handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_state=CurrState, pcList=PC_List, pcsInSimulation=PCsInSimulation, bestCandBirds=BestCandBirds})->
 	NewState = case CurrState of
-				   play_NEAT -> case PCsInSimulation of
-									1 -> pick_best(BestCandBirds ++ CandBirds);
-									Else -> BestCandBirds ++ CandBirds, PCsInSimulation--
-				                end,
-					            State
+				   play_NEAT -> case PCsInSimulation of     % how many PCs are running (birds) simulation now
+									1 ->
+										NewBestCandBirds = pick_best_birds(BestCandBirds, CandBirds),
+										State#graphics_state{pcsInSimulation=length(PC_List), bestCandBirds=NewBestCandBirds};
+									_Else ->
+										merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
+										State#graphics_state{pcsInSimulation=PCsInSimulation-1, bestCandBirds=BestCandBirds ++ CandBirds}
+				                end
 			   end,
 	{noreply, NewState}.
 
@@ -331,6 +335,16 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 	wxDC:drawPolygon(DC, [{CurrSpike_X, ?TOP_RECT_HEIGHT}, {Center_of_spike, ?TOP_RECT_HEIGHT+?SPIKE_HEIGHT}, {End_of_spike_X, ?TOP_RECT_HEIGHT}]),
 	wxDC:drawPolygon(DC, [{CurrSpike_X, ?BOTTOM_RECT_Y}, {Center_of_spike, ?BOTTOM_RECT_Y-?SPIKE_HEIGHT}, {End_of_spike_X, ?BOTTOM_RECT_Y}]),
 	draw_top_bottom_spikes(DC, End_of_spike_X+?SPIKE_GAP_X, Spikes_amount-1).
+
+
+%% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
+merge_birds(BestCandBirds, CandBirds) ->
+	todo
+	.
+
+%% Choose the best birds from BestCandBirds and notify all PCs. A bird performs better when it stays alive for more frames.
+pick_best_birds(BestCandBirds, CandBirds) ->
+	todo.
 
 %% =================================================================
 init_system() ->

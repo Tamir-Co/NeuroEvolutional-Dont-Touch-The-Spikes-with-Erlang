@@ -43,6 +43,7 @@
 -define(BIRD_START_Y, 320).
 
 -define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
+-define(SURVIVED_BIRDS, 0.1).   % how many birds are survived in %
 
 %% Neural network:
 -define(NN_STRUCTURE, [12, 6, 1]).
@@ -77,12 +78,14 @@
 	birdList,
 	bird_x = ?BIRD_START_X,
 	bird_direction = r,
+	bestCandBirds = [],
 	score = 0,
 	bestScore = 0,
 	curr_state,
 	spikesList,
 	spikesAmount = 1,
-	pcList
+	pcList,
+	pcsInSimulation
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 
