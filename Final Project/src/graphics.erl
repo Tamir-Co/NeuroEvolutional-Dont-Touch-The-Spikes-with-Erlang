@@ -136,11 +136,11 @@ handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_stat
 	NewState = case CurrState of
 				   play_NEAT -> case PCsInSimulation of     % how many PCs are running (birds) simulation now
 									1 ->
-										NewBestCandBirds = pick_best_birds(BestCandBirds, CandBirds),
-										State#graphics_state{pcsInSimulation=length(PC_List), bestCandBirds=NewBestCandBirds};
+										pick_best_birds(BestCandBirds, CandBirds),
+										State#graphics_state{pcsInSimulation=length(PC_List), bestCandBirds=[]};
 									_Else ->
-										merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
-										State#graphics_state{pcsInSimulation=PCsInSimulation-1, bestCandBirds=BestCandBirds ++ CandBirds}
+										NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
+										State#graphics_state{pcsInSimulation=PCsInSimulation-1, bestCandBirds=NewBestCandBirds}
 				                end
 			   end,
 	{noreply, NewState}.
