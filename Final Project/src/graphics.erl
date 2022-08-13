@@ -138,7 +138,7 @@ handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_stat
 									1 ->
 										FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
 										send_best_birds(FinalBestCandBirds, PC_List),
-										State#graphics_state{pcsInSimulation=length(PC_List), bestCandBirds=[]};
+										State#graphics_state{pcsInSimulation=0, bestCandBirds=[]};  % TODO change pcsInSimulation
 									_Else ->
 										NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
 										State#graphics_state{pcsInSimulation=PCsInSimulation-1, bestCandBirds=NewBestCandBirds}
@@ -198,7 +198,7 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% =================================================================
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, birdUserPID=BirdUserPID,
-										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->  % refresh screen for graphics
+										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, pcsInSimulation=PCsInSimulation}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	NewState = case CurrState of
 				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
@@ -221,20 +221,24 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 								
 				  play_NEAT	->  todo,      % TODO hd(PC_List) all code!!
-					            gen_server:cast(hd(PC_List), {simulate_frame}),
-					            {NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-					            case Has_changed_dir of
-									  true  ->
-										  NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-										  gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-										  NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
-										  NewScore = Score + 1;
-									  false ->
-										  NewSpikesList = SpikesList,
-										  NewSpikesAmount = SpikesAmount,
-										  NewScore = Score
-					            end,
-					            State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount}
+					            case PCsInSimulation of     % how many PCs are running (birds) simulation now
+					                0 -> todo, State;
+									_Else -> gen_server:cast(hd(PC_List), {simulate_frame}),
+										{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+										case Has_changed_dir of
+											true  ->
+												NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
+												gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
+												NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+												NewScore = Score + 1;
+											false ->
+												NewSpikesList = SpikesList,
+												NewSpikesAmount = SpikesAmount,
+												NewScore = Score
+										end,
+										State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount}
+					            end
+					            
 			  end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
@@ -367,7 +371,7 @@ merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose
 %%send_best_birds([], []) -> ok;
 send_best_birds(BestCandBirds, [PC_PID]) -> gen_server:cast(PC_PID, {populate_next_gen, BestCandBirds});
 send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
-	{CurrPcWeights, NextPcsWeights} = lists:split(?NUM_OF_SURVIVED_BIRDS / 1, BestCandBirds),	% TODO divide by the amount of PCs
+	{CurrPcWeights, NextPcsWeights} = lists:split(trunc(?NUM_OF_SURVIVED_BIRDS / 1), BestCandBirds),	% TODO divide by the amount of PCs
 	gen_server:cast(PC_PID, {populate_next_gen, CurrPcWeights}),
 	send_best_birds(NextPcsWeights, PC_List).
 
@@ -376,7 +380,8 @@ init_system() ->
 	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), init_spike_list(), idle),    % the graphics owns the user bird
 	
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
-	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, ?NUM_OF_BIRDS / 1),	% init pc bird server. TODO divide by the amount of PCs
+	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, trunc(?NUM_OF_BIRDS / 1)),	% init pc bird server. TODO divide by the amount of PCs
+	
 	{BirdUserPID, BirdServerPID}.
 
 % build a new & unique bird FSM

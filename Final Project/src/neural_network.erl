@@ -51,8 +51,11 @@ construct_NN([NeuronsAmount|NetworkStructureT], N_PIDsLayersMap, N_PIDsList, Lay
 	construct_NN(NetworkStructureT, N_PIDsLayersMap#{ {layer, LayerIdx} => PIDs }, N_PIDsList ++ PIDs, LayerIdx+1).
 
 %% Create NeuronsAmount neurons and return list of their PIDs
-construct_neurons(0, PIDs) -> PIDs;
+construct_neurons(0, PIDs) ->
+%%	io:format("hi !!!!!!!!!!!!!!!!!!!~n"),
+	PIDs;
 construct_neurons(NeuronsAmount, PIDs) ->
+%%	io:format("NeuronsAmount ~p~n", [NeuronsAmount]),
 	construct_neurons(NeuronsAmount-1, [spawn_link(fun() -> neuron:init() end)|PIDs]).
 
 %% Create random weights and biases

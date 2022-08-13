@@ -23,6 +23,7 @@ start(Name, PC_PID, SpikesList, GraphicState) ->
 
 %% =================================================================
 init([PC_PID, SpikesList, GraphicState]) ->
+%%	io:format("init(bird) -> ~n"),
 	case GraphicState of
 		idle        -> NN_PID = undefined;
 		play_NEAT   -> NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end) % init NN
