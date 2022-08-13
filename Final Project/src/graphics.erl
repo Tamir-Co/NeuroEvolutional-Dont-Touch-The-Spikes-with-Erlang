@@ -362,7 +362,7 @@ merge_birds([{BirdPID1, FrameCount1}|CandBirds1], [{BirdPID2, FrameCount2}|CandB
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
 send_best_birds([], _PC_List) -> finish;
-%%send_best_birds([{BirdPID, FrameCount}|CandBirdsT], PC_List) ->
+%%send_best_birds([{BirdPID, {FrameCount, WeightsMap}}|CandBirdsT], PC_List) ->
 send_best_birds(BestCandBirds, PC_List) ->
 	hd(PC_List) ! BestCandBirds.
 
@@ -371,7 +371,7 @@ init_system() ->
 	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), init_spike_list(), idle),    % the graphics owns the user bird
 	
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
-	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, ceil(?NUM_OF_BIRDS/4)),	% init pc bird server
+	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, ?NUM_OF_BIRDS),	% init pc bird server. TODO divide by ?4?
 	{BirdUserPID, BirdServerPID}.
 
 % build a new & unique bird FSM
