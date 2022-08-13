@@ -71,8 +71,11 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird
 		_Else ->
 			ok
 	end,
-	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}}.
+	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
+handle_cast({best_weights, WeightsMapList}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
+	create_mutations_and_send(maps:keys(BirdsMap), WeightsMapList),    % create mutations and send the new weights to the birds
+	{noreply, State#pc_bird_server_state{}}.
 %% =================================================================
 %% Start all bird FSMs and return the new bird list
 start_bird_FSM(0, _PC_Name, _SpikesList, BirdsMap, _GraphicState) -> BirdsMap;
@@ -89,3 +92,25 @@ msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 		false-> gen_statem:cast(Bird, Msg)
 	end,
 	msg_all_birds(Bird_T, Msg, IsMsg).
+
+
+%% Receive Bird PID list and weights map list.
+%% Mutate each weight map 9 times and keep 1 copy, then send it to the birds
+create_mutations_and_send(_BirdsListPID, []) -> finish;
+create_mutations_and_send([BirdPID|BirdsListPID_T], [WeightsMap|WeightsMapListT]) ->
+	send_keep(BirdPID, WeightsMap),     % keep each "brain" once
+	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, WeightsMap, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
+	create_mutations_and_send(RemainingPIDs, WeightsMapListT).  % mutate the remaining brains
+
+%% Mutate each weight map 9 times, then send it to the birds.
+mutate_brain_and_send(BirdsListPID, _WeightsMap, 0) -> BirdsListPID;
+mutate_brain_and_send([BirdPID|BirdsListPID_T], WeightsMap, NumOfMutations) ->
+	MutatedWeightsMap = mutate_brain(WeightsMap),
+	send_keep(BirdPID, MutatedWeightsMap),
+	mutate_brain_and_send(BirdsListPID_T, WeightsMap, NumOfMutations-1).
+
+%% Mutate a weight map (brain) randomly.
+%% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
+mutate_brain(WeightsMap) ->
+	maps:from_list([ {Key, maps:get(Key, WeightsMap)} + ((rand:uniform())-0.5)/?MUTATION_FACTOR || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)])
+	.
