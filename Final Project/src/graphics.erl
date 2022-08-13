@@ -244,14 +244,19 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
 %% =================================================================
-handle_sync_event(_Event, _, _State=#graphics_state{spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
-													birdUser=#bird{y=Y}, bird_x=X, bird_direction=Direction, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
+handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
+													birdUser=#bird{y=Y}, bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
 	
 	DC = wxPaintDC:new(Panel),
 	%wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
-	case Direction of
-		r -> wxDC:drawBitmap(DC, BitmapBird_R, {X, Y});
-		l -> wxDC:drawBitmap(DC, BitmapBird_L, {X, Y})
+	BitmapBird = case Direction of
+		r -> BitmapBird_R;
+		l -> BitmapBird_L
+	end,
+	
+	case CurrState of
+		play_user -> wxDC:drawBitmap(DC, BitmapBird, {X, Y});
+		play_NEAT -> draw_birds(DC, BitmapBird, BirdList)
 	end,
 	
 	wxStaticText:setLabel(TxtScore, "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
@@ -313,6 +318,12 @@ insert_spike([IsSpike|Spikes_T], SpikeIdx) ->
 %%%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
 %%	SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 %%	SpikesList.
+
+
+draw_birds(_, _, []) -> ok;
+draw_birds(DC, BitmapBird, [#bird{x=X,y=Y}|BirdList]) ->
+	wxDC:drawBitmap(DC, BitmapBird, {X, Y})
+	draw_birds(DC, BitmapBird, BirdList).
 
 
 draw_wall_spikes(_, [], _, _) -> ok;

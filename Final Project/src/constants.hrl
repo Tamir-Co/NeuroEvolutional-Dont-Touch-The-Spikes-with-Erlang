@@ -13,6 +13,7 @@
 -define(BG_WIDTH, 400).
 -define(BG_HEIGHT, 700).
 
+
 %% Spikes:
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
@@ -25,12 +26,13 @@
 -define(SPIKE_GAP_Y, 13).
 -define(SPIKES_TOP_Y, 100).
 
--define(SPIKES_LEFT_X, 22).
--define(SPIKE_GAP_X, 4).
+-define(SPIKES_LEFT_X, 24).%32 | 25		400 - (25 + (36 + 14) * 7).
+-define(SPIKE_GAP_X, 8).   %12 | 14
 -define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120). % TODO need this?
 -define(TOP_RECT_HEIGHT, 70).
 -define(BOTTOM_RECT_Y, 610). %?BG_HEIGHT-120
 -define(BOTTOM_RECT_HEIGHT, 90).
+
 
 %% Bird:
 -define(BIRD_WIDTH, 50).
@@ -44,6 +46,7 @@
 
 -define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
 -define(SURVIVED_BIRDS, 0.1).   % how many birds are survived in %
+
 
 %% Neural network:
 -define(NN_STRUCTURE, [12, 6, 1]).
