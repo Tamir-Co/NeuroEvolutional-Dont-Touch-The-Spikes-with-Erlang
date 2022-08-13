@@ -61,11 +61,11 @@ handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
 	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
 	{noreply, State};
 
-handle_cast({bird_disqualified, BirdPID, FrameCount}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds}) ->
-	NewBirdsMap = BirdsMap#{BirdPID := FrameCount},
+handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds}) ->
+	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsMap}},
 	case NumOfAliveBirds of
 		1 ->
-			SortedBirds = lists:keysort(2, maps:to_list(NewBirdsMap)),          % all birds are dead now, send them sorted (by frame count) to graphics
+			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
 			{_, CandBirds} = lists:split(?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
 			wx_object:cast(graphics, {pc_finished_simulation, CandBirds});
 		_Else ->
@@ -78,7 +78,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount}, State=#pc_bird_server_stat
 start_bird_FSM(0, _PC_Name, _SpikesList, BirdsMap, _GraphicState) -> BirdsMap;
 start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState) ->
 	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList, GraphicState),
-	start_bird_FSM(NumOfPcBirds-1, PC_Name, SpikesList, BirdsMap#{BirdPID => 0}, GraphicState).
+	start_bird_FSM(NumOfPcBirds-1, PC_Name, SpikesList, BirdsMap#{BirdPID => {0, []}}, GraphicState).
 
 
 %% Send message/cast to all birds

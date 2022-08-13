@@ -48,7 +48,9 @@ calc(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
 							 calc(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
 								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
-				end
+				end;
+		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
+			calc(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
 	end.
 
 %% =================================================================

@@ -99,7 +99,7 @@
 	graphicState = idle,
 	numOfPcBirds,       % amount of PC birds ?250?
 	numOfAliveBirds,    % amount of birds in simulation right now
-	birdsMap            % #{PID => frameCount}
+	birdsMap            % #{PID => {frameCount, WeightsMap}}
 }).
 
 -record(bird, {

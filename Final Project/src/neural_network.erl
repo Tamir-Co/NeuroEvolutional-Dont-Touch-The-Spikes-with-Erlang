@@ -37,7 +37,7 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 				loop(NN_Data);
 
 		{get_weights, From} ->
-				From ! WeightsMap,
+				From ! {weightsMap, WeightsMap},  % send the bird its "brain" (weights)
 				loop(NN_Data)
 	end.
 
