@@ -137,7 +137,7 @@ handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_stat
 				   play_NEAT -> case PCsInSimulation of     % how many PCs are running (birds) simulation now
 									1 ->
 										FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
-										send_best_birds(FinalBestCandBirds),
+										send_best_birds(FinalBestCandBirds, PC_List),
 										State#graphics_state{pcsInSimulation=length(PC_List), bestCandBirds=[]};
 									_Else ->
 										NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
@@ -162,8 +162,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 		?ButtonStartNEATID ->
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:layout(MainSizer),
-			NumOfBirds = ?NUM_OF_BIRDS,
-			gen_server:cast(hd(PC_List), {start_bird_FSM, NumOfBirds, play_NEAT, SpikesList}),
+			gen_server:cast(hd(PC_List), {start_bird_FSM, play_NEAT, SpikesList}),
 			State#graphics_state{score=0};
 		
 		?ButtonJumpID ->
@@ -361,16 +360,18 @@ merge_birds([{BirdPID1, FrameCount1}|CandBirds1], [{BirdPID2, FrameCount2}|CandB
 	merge_birds([{BirdPID1, FrameCount1}|CandBirds1], CandBirds2, BestCandBirds ++ [{BirdPID2, FrameCount2}], BirdsToChoose-1).
 
 
-%% Notify all PCs about the best birds. A bird performs better when it stays alive for more frames.
-send_best_birds(FinalBestCandBirds) ->
-	todo.
+%% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
+send_best_birds([], _PC_List) -> finish;
+%%send_best_birds([{BirdPID, FrameCount}|CandBirdsT], PC_List) ->
+send_best_birds(BestCandBirds, PC_List) ->
+	hd(PC_List) ! BestCandBirds.
 
 %% =================================================================
 init_system() ->
 	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), init_spike_list(), idle),    % the graphics owns the user bird
 	
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
-	{ok, BirdServerPID} = pc_bird_server:start(PC_Name),	% init pc bird server
+	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, ceil(?NUM_OF_BIRDS/4)),	% init pc bird server
 	{BirdUserPID, BirdServerPID}.
 
 % build a new & unique bird FSM

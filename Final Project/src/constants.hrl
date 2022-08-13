@@ -47,7 +47,7 @@
 
 -define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
 -define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
--define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation (in %)
+-define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
 
 
 %% Neural network:
@@ -97,7 +97,9 @@
 -record(pc_bird_server_state, {
 	pcName,
 	graphicState = idle,
-	birdList
+	numOfPcBirds,       % amount of PC birds ?250?
+	numOfAliveBirds,    % amount of birds in simulation right now
+	birdsMap            % #{PID => frameCount}
 }).
 
 -record(bird, {
@@ -109,7 +111,7 @@
 	spikesList = lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 	nnPID,
 	graphicState = idle,
-	frame_count = 0
+	frameCount = 0
 }).
 
 -record(nn_data, {

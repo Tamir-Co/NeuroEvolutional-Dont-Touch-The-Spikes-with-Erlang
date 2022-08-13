@@ -51,7 +51,7 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 %%			undefined;
 		
 		play_NEAT ->
-			{next_state, simulation, Bird#bird{frame_count=0}}
+			{next_state, simulation, Bird#bird{frameCount=0}}
 	end.
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
@@ -77,13 +77,13 @@ simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesLi
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
-			gen_server:cast(PC_PID, {bird_disqualified, self()}),
+			gen_server:cast(PC_PID, {bird_disqualified, self(), Bird#bird.frameCount}),
 			{next_state, idle, #bird{}};
 		false ->
 			run_NN(NextBird),
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
 			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
-			{keep_state, NextBird#bird{frame_count=Bird#bird.frame_count + 1}}
+			{keep_state, NextBird#bird{frameCount=Bird#bird.frameCount + 1}}
 	end.
 
 
