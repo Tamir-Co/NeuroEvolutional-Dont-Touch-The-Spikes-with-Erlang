@@ -322,7 +322,7 @@ insert_spike([IsSpike|Spikes_T], SpikeIdx) ->
 
 draw_birds(_, _, []) -> ok;
 draw_birds(DC, BitmapBird, [#bird{x=X,y=Y}|BirdList]) ->
-	wxDC:drawBitmap(DC, BitmapBird, {X, Y})
+	wxDC:drawBitmap(DC, BitmapBird, {X, Y}),
 	draw_birds(DC, BitmapBird, BirdList).
 
 
