@@ -353,7 +353,7 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 merge_birds(BestCandBirds, CandBirds) ->
 	merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS).	% we only choose ceil(0.1*N) of all birds
 
-merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
+merge_birds(_, _, BestCandBirds, 0) -> element(2, lists:unzip(BestCandBirds));
 merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
 	{FrameCount1, _WeightsMap1} = Bird1,
 	{FrameCount2, _WeightsMap2} = Bird2,
@@ -364,7 +364,8 @@ merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose
 
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
-send_best_birds([], []) -> ok;
+%%send_best_birds([], []) -> ok;
+send_best_birds(BestCandBirds, [PC_PID]) -> gen_server:cast(PC_PID, {populate_next_gen, BestCandBirds});
 send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
 	{CurrPcWeights, NextPcsWeights} = lists:split(?NUM_OF_SURVIVED_BIRDS / 1, BestCandBirds),	% TODO divide by the amount of PCs
 	gen_server:cast(PC_PID, {populate_next_gen, CurrPcWeights}),

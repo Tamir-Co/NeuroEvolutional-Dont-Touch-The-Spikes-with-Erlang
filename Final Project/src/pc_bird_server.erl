@@ -73,7 +73,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird
 	end,
 	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
-handle_cast({best_weights, WeightsMapList}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
+handle_cast({populate_next_gen, WeightsMapList}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
 	create_mutations_and_send(maps:keys(BirdsMap), WeightsMapList),    % create mutations and send the new weights to the birds
 	{noreply, State#pc_bird_server_state{}}.
 %% =================================================================
