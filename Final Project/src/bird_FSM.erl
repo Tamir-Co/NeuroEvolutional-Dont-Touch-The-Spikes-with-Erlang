@@ -51,8 +51,6 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 %%			undefined;
 		
 		play_NEAT ->
-%%			NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end),
-%%			NN_PID ! {set_weights}, % TODO
 			{next_state, simulation, Bird#bird{frame_count=0}}
 	end.
 
@@ -76,13 +74,13 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			{keep_state, NextBird}
 	end;
 simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesList, graphicState=play_NEAT}) ->     % play_NEAT
-	run_NN(Bird),
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
 			gen_server:cast(PC_PID, {bird_disqualified, self()}),
 			{next_state, idle, #bird{}};
 		false ->
+			run_NN(NextBird),
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
 			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 			{keep_state, NextBird#bird{frame_count=Bird#bird.frame_count + 1}}
@@ -105,10 +103,6 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 
 	%% check if the bird touching top/bottom spikes, or bird touching wall spikes (only when heading to the wall and near it)
 	IsDead = Y >= ?SPIKES_BOTTOM_Y orelse Y =< ?SPIKES_TOP_Y orelse is_bird_touch_wall_spike(Bird, SpikesList, NewDirection),
-%%	 case IsDead of
-%%		true  -> game_over(PC_PID);
-%%		false -> ok
-%%	end,
 	
 	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+?GRAVITY*?TIME_UNIT, direction=NewDirection}}.   % TODO check mult (*)
 
@@ -119,11 +113,6 @@ run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=Spi
 		l -> NN_PID ! {decide_jump, self(), Y, X, SpikesList}
 	end.
 
-%%
-%%game_over(PC_PID) ->
-%%	gen_server:cast(PC_PID, {bird_disqualified, self()}),
-%%	io:format("Game Over!~n").
-%%	terminate(normal, undefined, undefined).
 
 %% Receive bird location and spikes.
 %% Return true if bird disqualified and otherwise false
@@ -136,10 +125,12 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
 				 end
 	end.
 
+
 %% Gets a height Y and returns the closest spike's index
 closest_spike(Y) ->
 	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP_Y,
 	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
+
 
 %% Replaces the genes of the bird using random mutations on other good genes
 replace_genes(_Genes) ->
