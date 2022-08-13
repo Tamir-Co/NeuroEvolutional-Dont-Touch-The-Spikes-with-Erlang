@@ -45,7 +45,7 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 		play_NEAT ->
 			NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end),
 %%			NN_PID ! {set_weights}, % TODO
-			{next_state, simulation, Bird#bird{nnPID=NN_PID}}
+			{next_state, simulation, Bird#bird{nnPID=NN_PID, frame_count=0}}
 	end.
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
@@ -68,7 +68,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{pc_pid=PC_PID, spikesList=SpikesLi
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	#bird{x=X, y=Y, direction=Direction} = NextBird,
 	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
-	{keep_state, NextBird}.
+	{keep_state, NextBird#bird{frame_count=Bird#bird.frame_count + 1}}.
 
 
 %% =================================================================

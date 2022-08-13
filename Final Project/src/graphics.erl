@@ -136,7 +136,8 @@ handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_stat
 	NewState = case CurrState of
 				   play_NEAT -> case PCsInSimulation of     % how many PCs are running (birds) simulation now
 									1 ->
-										pick_best_birds(BestCandBirds, CandBirds),
+										FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
+										send_best_birds(FinalBestCandBirds),
 										State#graphics_state{pcsInSimulation=length(PC_List), bestCandBirds=[]};
 									_Else ->
 										NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
@@ -350,11 +351,10 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 
 %% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
 merge_birds(BestCandBirds, CandBirds) ->
-	todo
-	.
+	todo.
 
-%% Choose the best birds from BestCandBirds and notify all PCs. A bird performs better when it stays alive for more frames.
-pick_best_birds(BestCandBirds, CandBirds) ->
+%% Notify all PCs about the best birds. A bird performs better when it stays alive for more frames.
+send_best_birds(FinalBestCandBirds) ->
 	todo.
 
 %% =================================================================
