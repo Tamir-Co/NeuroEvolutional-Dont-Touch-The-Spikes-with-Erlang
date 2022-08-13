@@ -355,32 +355,27 @@ merge_birds(BestCandBirds, CandBirds) ->
 
 merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
 merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
-	{_BirdPID1, {FrameCount1, _WeightsMap1}} = Bird1,
-	{_BirdPID2, {FrameCount2, _WeightsMap2}} = Bird2,
+	{FrameCount1, _WeightsMap1} = Bird1,
+	{FrameCount2, _WeightsMap2} = Bird2,
 	case FrameCount1 < FrameCount2 of
 		true  -> merge_birds([Bird1|CandBirds1], CandBirds2, BestCandBirds ++ [Bird2], BirdsToChoose-1);
 		false -> merge_birds(CandBirds1, [Bird2|CandBirds2], BestCandBirds ++ [Bird1], BirdsToChoose-1)
 	end.
 
-% merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
-% merge_birds([{BirdPID1, FrameCount1}|CandBirds1], [{BirdPID2, FrameCount2}|CandBirds2], BestCandBirds, BirdsToChoose) when FrameCount2 < FrameCount1 ->
-	% merge_birds(CandBirds1, [{BirdPID2, FrameCount2}|CandBirds2], BestCandBirds ++ [{BirdPID1, FrameCount1}], BirdsToChoose-1);
-% merge_birds([{BirdPID1, FrameCount1}|CandBirds1], [{BirdPID2, FrameCount2}|CandBirds2], BestCandBirds, BirdsToChoose) ->
-	% merge_birds([{BirdPID1, FrameCount1}|CandBirds1], CandBirds2, BestCandBirds ++ [{BirdPID2, FrameCount2}], BirdsToChoose-1).
-
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
-send_best_birds([], _PC_List) -> finish;
-%%send_best_birds([{BirdPID, {FrameCount, WeightsMap}}|CandBirdsT], PC_List) ->
-send_best_birds(BestCandBirds, PC_List) ->
-	hd(PC_List) ! BestCandBirds.
+send_best_birds([], []) -> ok;
+send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
+	{CurrPcWeights, NextPcsWeights} = lists:split(?NUM_OF_SURVIVED_BIRDS / 1, BestCandBirds),	% TODO divide by the amount of PCs
+	gen_server:cast(PC_PID, {populate_next_gen, CurrPcWeights}),
+	send_best_birds(NextPcsWeights, PC_List).
 
 %% =================================================================
 init_system() ->
 	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), init_spike_list(), idle),    % the graphics owns the user bird
 	
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
-	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, ?NUM_OF_BIRDS),	% init pc bird server. TODO divide by ?4?
+	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, ?NUM_OF_BIRDS / 1),	% init pc bird server. TODO divide by the amount of PCs
 	{BirdUserPID, BirdServerPID}.
 
 % build a new & unique bird FSM
