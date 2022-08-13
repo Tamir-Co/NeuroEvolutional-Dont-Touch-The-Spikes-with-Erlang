@@ -98,19 +98,19 @@ msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 %% Mutate each weight map 9 times and keep 1 copy, then send it to the birds
 create_mutations_and_send(_BirdsListPID, []) -> finish;
 create_mutations_and_send([BirdPID|BirdsListPID_T], [WeightsMap|WeightsMapListT]) ->
-	send_keep(BirdPID, WeightsMap),     % keep each "brain" once
+	BirdPID ! {replace_genes, WeightsMap},     % keep each "brain" once
 	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, WeightsMap, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
 	create_mutations_and_send(RemainingPIDs, WeightsMapListT).  % mutate the remaining brains
 
-%% Mutate each weight map 9 times, then send it to the birds.
+%% Mutate each weight map ?9? times, then send it to the birds.
 mutate_brain_and_send(BirdsListPID, _WeightsMap, 0) -> BirdsListPID;
 mutate_brain_and_send([BirdPID|BirdsListPID_T], WeightsMap, NumOfMutations) ->
 	MutatedWeightsMap = mutate_brain(WeightsMap),
-	send_keep(BirdPID, MutatedWeightsMap),
+	BirdPID ! {replace_genes, MutatedWeightsMap},
 	mutate_brain_and_send(BirdsListPID_T, WeightsMap, NumOfMutations-1).
 
 %% Mutate a weight map (brain) randomly.
 %% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
 mutate_brain(WeightsMap) ->
-	maps:from_list([ {Key, maps:get(Key, WeightsMap)} + ((rand:uniform())-0.5)/?MUTATION_FACTOR || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)])
-	.
+	maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
+	maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]).

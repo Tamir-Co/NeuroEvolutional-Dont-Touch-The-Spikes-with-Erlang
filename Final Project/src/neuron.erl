@@ -29,10 +29,10 @@ test()->
 init() ->
 	receive
 		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
-				calc(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
+				loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
 	end.
 
-calc(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
+loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
 	receive
 		{neuron, From, A} ->
 				case lists:member(From, RemInPIDs) of		% is the sender legal
@@ -42,15 +42,15 @@ calc(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 				W = maps:get(From, Weights),		% get the relevant input weight
 				Z = Acc + W*A,
 				case length(RemInPIDs) > 1 of		% check if the neuron hasn't received all its inputs yet
-					true  -> calc(#neuron_data{	acc=Z, weights=Weights, bias=Bias, activation=Activation,
+					true  -> loop(#neuron_data{	acc=Z, weights=Weights, bias=Bias, activation=Activation,
 												origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
 					false -> MyA = activation_func(Activation, Z + Bias),
 							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
-							 calc(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
+							 loop(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
 								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
 				end;
 		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
-			calc(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
+			loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
 	end.
 
 %% =================================================================

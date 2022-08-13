@@ -53,7 +53,8 @@
 %% Neural network:
 -define(NN_STRUCTURE, [12, 6, 1]).
 
--define(MUTATION_FACTOR, 20).   % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
 
 
 %% UI IDs:
