@@ -267,7 +267,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 	wxDC:setBrush(DC, Brush),
 	wxDC:drawRectangle(DC, {0, 0, ?BG_WIDTH, ?TOP_RECT_HEIGHT}),
 	wxDC:drawRectangle(DC, {0, ?BOTTOM_RECT_Y, ?BG_WIDTH, ?BOTTOM_RECT_HEIGHT}),
-	draw_top_bottom_spikes(DC, ?SPIKES_LEFT_X, ?MAX_SPIKES_AMOUNT-1),
+	draw_top_bottom_spikes(DC, ?SPIKES_LEFT_X, ?TOP_BOTTOM_SPIKES_AMOUNT),
 	draw_wall_spikes(DC, SpikesList, ?SPIKES_TOP_Y, Direction),
 	
 	wxPaintDC:destroy(DC);
