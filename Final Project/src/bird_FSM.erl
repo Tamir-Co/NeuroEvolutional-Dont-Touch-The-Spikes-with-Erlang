@@ -24,7 +24,7 @@ start(Name, PC_PID, SpikesList, GraphicState) ->
 %% =================================================================
 init([PC_PID, SpikesList, GraphicState]) ->
 	case GraphicState of
-		idle        -> ok;
+		idle        -> NN_PID = undefined;
 		play_NEAT   -> NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end) % init NN
 	end,
 	{ok, idle, #bird{	pc_pid=PC_PID,
@@ -65,7 +65,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
-			wx_object:cast(graphics, {bird_disqualified, self()}),  % notify graphics that its bird dead
+			wx_object:cast(graphics, {user_bird_disqualified, self()}),  % notify graphics that its bird dead
 			io:format("Game Over!~n"),
 			{next_state, idle, #bird{}};
 		false ->

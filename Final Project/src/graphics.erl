@@ -125,7 +125,7 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{birdUser=Bir
 	NewState = State#graphics_state{birdUser=NewBird},
 	{noreply, NewState};
 
-handle_cast({bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
+handle_cast({user_bird_disqualified, _BirdPID}, State=#graphics_state{curr_state = CurrState})->
 	NewState = case CurrState of
 				   play_user -> sound_proc ! "lose_trim",
 					   			State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT}
