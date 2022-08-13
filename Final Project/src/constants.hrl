@@ -106,7 +106,8 @@
 	pc_pid,
 	spikesList = lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 	nnPID,
-	graphicState = idle
+	graphicState = idle,
+	frame_count = 0
 }).
 
 -record(nn_data, {
