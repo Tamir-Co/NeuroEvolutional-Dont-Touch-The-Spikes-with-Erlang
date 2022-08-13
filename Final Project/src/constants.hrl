@@ -46,7 +46,8 @@
 -define(BIRD_START_Y, 320).
 
 -define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
--define(SURVIVED_BIRDS, 0.1).   % how many birds are survived in %
+-define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
+-define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation (in %)
 
 
 %% Neural network:
