@@ -117,7 +117,8 @@
 -record(nn_data, {
 	networkStructure,   % [L1, L2, ...]
 	n_PIDsLayersMap,
-	weightsMap
+	weightsMap,
+	n_PIDsList
 }).
 
 -record(neuron_data, {

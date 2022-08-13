@@ -39,9 +39,10 @@ callback_mode() ->
 %% =================================================================
 % idle(enter, _OldState, Bird=#bird{}) ->
 % {keep_state, #bird{}}.
-idle(info, {replace_genes, Genes}, #bird{}) ->
-	NextBird = replace_genes(Genes),
-	{keep_state, NextBird};
+idle(info, {replace_genes, NewWeightsMap}, Bird=#bird{nnPID = NN_PID}) ->
+%%	NextBird = replace_genes(Genes),
+	NN_PID ! {set_weights, NewWeightsMap},
+	{keep_state, Bird};
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
 		idle ->

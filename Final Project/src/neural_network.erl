@@ -21,12 +21,12 @@ init(NetworkStructure) ->
 %%	io:format("self ~p~n", [self()]),
 	configure_NN(WeightsMap, N_PIDsList),
 %%	io:format("N_PIDsLayersMap ~p~n", [N_PIDsLayersMap]),
-	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap}).
+	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList}).
 
-loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap}) ->
+loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsList=N_PIDsList}) ->
 	receive
 		{set_weights, NewWeightsMap} ->
-				todo,
+				configure_NN(NewWeightsMap, N_PIDsList),
 				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 
 		{decide_jump, From, BirdHeight, BirdWallDistance, SpikesList} ->    % TODO send fewer SpikesList
