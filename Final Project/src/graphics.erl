@@ -256,6 +256,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 	end,
 	
 	case CurrState of
+		idle	  -> wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		play_user -> wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		play_NEAT -> draw_birds(DC, BitmapBird, BirdList)
 	end,
@@ -351,7 +352,12 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 
 %% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
 merge_birds(BestCandBirds, CandBirds) ->
+	merge_birds(BestCandBirds, CandBirds, [], ceil(?NUM_OF_BIRDS*?SURVIVED_BIRDS)).	% we only choose ceil(0.1*N) of all birds
+
+merge_birds(CandBirds1, CandBirds2, BestCandBirds, BirdsToChoose) -> ok;
+merge_birds(CandBirds1, CandBirds2, BestCandBirds, BirdsToChoose) ->
 	todo.
+
 
 %% Notify all PCs about the best birds. A bird performs better when it stays alive for more frames.
 send_best_birds(FinalBestCandBirds) ->
