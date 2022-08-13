@@ -65,7 +65,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
-			wx_object:cast(graphics, {user_bird_disqualified, self()}),  % notify graphics that its bird dead
+			wx_object:cast(graphics, {user_bird_disqualified}),  % notify graphics that its bird dead
 			io:format("Game Over!~n"),
 			{next_state, idle, #bird{}};
 		false ->
