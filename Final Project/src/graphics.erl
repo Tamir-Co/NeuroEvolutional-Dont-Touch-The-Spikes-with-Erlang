@@ -354,9 +354,11 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 merge_birds(BestCandBirds, CandBirds) ->
 	merge_birds(BestCandBirds, CandBirds, [], ceil(?NUM_OF_BIRDS*?SURVIVED_BIRDS)).	% we only choose ceil(0.1*N) of all birds
 
-merge_birds(CandBirds1, CandBirds2, BestCandBirds, BirdsToChoose) -> ok;
-merge_birds(CandBirds1, CandBirds2, BestCandBirds, BirdsToChoose) ->
-	todo.
+merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
+merge_birds([{BirdPID1, FrameCount1}|CandBirds1], [{BirdPID2, FrameCount2}|CandBirds2], BestCandBirds, BirdsToChoose) when FrameCount2 < FrameCount1 ->
+	merge_birds(CandBirds1, [{BirdPID2, FrameCount2}|CandBirds2], BestCandBirds ++ [{BirdPID1, FrameCount1}], BirdsToChoose-1);
+merge_birds([{BirdPID1, FrameCount1}|CandBirds1], [{BirdPID2, FrameCount2}|CandBirds2], BestCandBirds, BirdsToChoose) ->
+	merge_birds([{BirdPID1, FrameCount1}|CandBirds1], CandBirds2, BestCandBirds ++ [{BirdPID2, FrameCount2}], BirdsToChoose-1).
 
 
 %% Notify all PCs about the best birds. A bird performs better when it stays alive for more frames.
