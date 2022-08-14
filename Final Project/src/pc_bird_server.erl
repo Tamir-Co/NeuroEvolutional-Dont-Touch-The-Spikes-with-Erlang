@@ -116,7 +116,11 @@ mutate_brain_and_send([BirdPID|BirdsListPID_T], WeightsMap, NumOfMutations) ->
 %% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
 mutate_brain(WeightsMap) ->
 	?PRINT('FNJDONFDJOFN WeightsMap', WeightsMap),
-	MutateBiasesWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
-	MutateWeightsWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]),
-	maps:merge(MutateBiasesWeightsMap, MutateWeightsWeightsMap).
+	Fun = fun({bias, _}, W)		 -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR;   
+			 ({weight, _, _}, W) -> W + (rand:uniform() - 0.5) / ?MUTATION_WEIGHT_FACTOR
+		  end,
+	maps:map(Fun, WeightsMap).
+	% MutateBiasesWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
+	% MutateWeightsWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]),
+	% maps:merge(MutateBiasesWeightsMap, MutateWeightsWeightsMap).
 	
