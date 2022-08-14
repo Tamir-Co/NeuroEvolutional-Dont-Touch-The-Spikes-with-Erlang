@@ -40,8 +40,12 @@ callback_mode() ->
 %% =================================================================
 % idle(enter, _OldState, Bird=#bird{}) ->
 % {keep_state, #bird{}}.
+idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
+	{keep_state, Bird};
 idle(info, {replace_genes, NewWeightsMap}, Bird=#bird{nnPID = NN_PID}) ->
 %%	NextBird = replace_genes(Genes),
+	?PRINT('{Bird, NN_PID}', {Bird, NN_PID}),
+	?PRINT('', "~n~n~n~n"),
 	NN_PID ! {set_weights, NewWeightsMap},
 	{keep_state, Bird};
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
@@ -58,10 +62,10 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
 	{keep_state, Bird#bird{spikesList = SpikesList}};
-simulation(cast, {jump}, Bird=#bird{pc_pid=PC_PID, spikesList=_SpikesList}) ->
+simulation(cast, {jump}, Bird=#bird{spikesList=_SpikesList}) ->
 	NextBird = jump(Bird),
-	#bird{x=X, y=Y, direction=Direction} = NextBird,
-	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
+%%	#bird{x=X, y=Y, direction=Direction} = NextBird,
+%%	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird};
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->     % play_user
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),

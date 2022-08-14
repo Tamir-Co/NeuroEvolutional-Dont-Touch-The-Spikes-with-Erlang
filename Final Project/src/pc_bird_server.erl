@@ -67,6 +67,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird
 	case NumOfAliveBirds of
 		1 ->
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
+			?PRINT(sorted_bird_list, SortedBirds),
 			{_, CandBirds} = lists:split(?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
 			wx_object:cast(graphics, {pc_finished_simulation, CandBirds});
 		_Else ->
