@@ -60,10 +60,11 @@ handle_cast({simulate_frame}, State=#pc_bird_server_state{birdsMap = BirdsMap}) 
 
 handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
 	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
+%%	?PRINT(bird_location_PC, " "),
 	{noreply, State};
 
-handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds}) ->
-	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsMap}},
+handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds}) ->
+	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsList}},
 	case NumOfAliveBirds of
 		1 ->
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
@@ -74,8 +75,8 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird
 	end,
 	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
-handle_cast({populate_next_gen, WeightsMapList}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
-	create_mutations_and_send(maps:keys(BirdsMap), WeightsMapList),    % create mutations and send the new weights to the birds
+handle_cast({populate_next_gen, ListOfBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
+	create_mutations_and_send(maps:keys(BirdsMap), ListOfBrains),    % create mutations and send the new weights to the birds
 	{noreply, State#pc_bird_server_state{}}.
 
 %% =================================================================
@@ -83,7 +84,7 @@ handle_cast({populate_next_gen, WeightsMapList}, State=#pc_bird_server_state{bir
 start_bird_FSM(0, _PC_Name, _SpikesList, BirdsMap, _GraphicState) -> BirdsMap;
 start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState) ->
 	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList, GraphicState),
-	start_bird_FSM(NumOfPcBirds-1, PC_Name, SpikesList, BirdsMap#{BirdPID => {0, #{}}}, GraphicState).
+	start_bird_FSM(NumOfPcBirds-1, PC_Name, SpikesList, BirdsMap#{BirdPID => {0, []}}, GraphicState).
 
 
 %% Send message/cast to all birds
@@ -91,35 +92,39 @@ msg_all_birds([], _Msg, _IsMsg) -> done;
 msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 	case IsMsg of
 		true -> Bird ! Msg;
-		false-> gen_statem:cast(Bird, Msg)
+		false-> gen_statem:cast(Bird, Msg)%, ?PRINT(msg_all_birds, Msg)
 	end,
 	msg_all_birds(Bird_T, Msg, IsMsg).
 
 
 %% Receive Bird PID list and weights map list.
-%% Mutate each weight map 9 times and keep 1 copy, then send it to the birds
+%% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
 create_mutations_and_send(_BirdsListPID, []) -> finish;
-create_mutations_and_send([BirdPID|BirdsListPID_T], [WeightsMap|WeightsMapListT]) ->
-	BirdPID ! {replace_genes, WeightsMap},     % keep each "brain" once
-	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, WeightsMap, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
-	create_mutations_and_send(RemainingPIDs, WeightsMapListT).  % mutate the remaining brains
+create_mutations_and_send([BirdPID|BirdsListPID_T], [WeightsList|WeightsListT]) ->
+	BirdPID ! {replace_genes, WeightsList},     % keep each "brain" once
+	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, WeightsList, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
+	create_mutations_and_send(RemainingPIDs, WeightsListT).  % mutate the remaining brains
 
-%% Mutate each weight map ?9? times, then send it to the birds.
-mutate_brain_and_send(BirdsListPID, _WeightsMap, 0) -> BirdsListPID;
-mutate_brain_and_send([BirdPID|BirdsListPID_T], WeightsMap, NumOfMutations) ->
-	MutatedWeightsMap = mutate_brain(WeightsMap),
-	?PRINT('MutatedWeightsMap PC!!!!', MutatedWeightsMap),
-	BirdPID ! {replace_genes, MutatedWeightsMap},
-	mutate_brain_and_send(BirdsListPID_T, WeightsMap, NumOfMutations-1).
+%% Mutate each weight list ?9? times, then send it to the birds.
+mutate_brain_and_send(BirdsListPID, _WeightsList, 0) -> BirdsListPID;
+mutate_brain_and_send([BirdPID|BirdsListPID_T], Brain, NumOfMutations) ->
+	MutatedBrain = mutate_brain(Brain),
+%%	?PRINT('MutatedWeightsMap PC!!!!', MutatedWeightsList),
+	BirdPID ! {replace_genes, MutatedBrain},
+	mutate_brain_and_send(BirdsListPID_T, Brain, NumOfMutations-1).
 
-%% Mutate a weight map (brain) randomly.
+%% Mutate a weight list (brain) randomly.
 %% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
-mutate_brain(WeightsMap) ->
-	?PRINT('FNJDONFDJOFN WeightsMap', WeightsMap),
-	Fun = fun({bias, _}, W)		 -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR;   
-			 ({weight, _, _}, W) -> W + (rand:uniform() - 0.5) / ?MUTATION_WEIGHT_FACTOR
-		  end,
-	maps:map(Fun, WeightsMap).
+mutate_brain(Brain) ->
+	Fun = fun(W) -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR end,     % TODO w*(1+(rand-0.5)/20)
+	lists:map(Fun, Brain).
+	
+%%mutate_brain(Brain) ->
+%%	?PRINT('FNJDONFDJOFN WeightsMap', Brain),
+%%	Fun = fun({bias, _}, W)		 -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR;
+%%			 ({weight, _, _}, W) -> W + (rand:uniform() - 0.5) / ?MUTATION_WEIGHT_FACTOR
+%%		  end,
+%%	maps:map(Fun, Brain).
 	% MutateBiasesWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
 	% MutateWeightsWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]),
 	% maps:merge(MutateBiasesWeightsMap, MutateWeightsWeightsMap).

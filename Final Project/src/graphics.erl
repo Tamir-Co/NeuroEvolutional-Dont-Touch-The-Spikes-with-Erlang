@@ -26,7 +26,7 @@ start() ->
 	wx_object:start({local,?SERVER}, ?MODULE, [], []).
 
 init(_Args) ->
-	process_flag(trap_exit, true),
+%%	process_flag(trap_exit, true),  % TODO
 	WxServer = wx:new(),
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
 	Panel = wxPanel:new(Frame, [{size, {?BG_WIDTH, ?BG_HEIGHT}}]),
@@ -126,9 +126,9 @@ handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcLis
 %%	NewState = State#graphics_state{birdList=BirdList ++ [NewBird]},
 %%	{noreply, NewState};
 
-handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdUser=Bird, birdList=BirdList})->
-%%	io:format("M=: ~p~n", [M]),
-	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
+handle_cast(M={bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
+	io:format("M=: ~p~n", [M]),
+	NewBird = #bird{x=X, y=Y, direction=Direction},
 	case CurrState of
 		play_user ->
 			NewState = State#graphics_state{birdUser=NewBird};
@@ -144,6 +144,7 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = CurrSta
 			   end,
 	{noreply, NewState};
 
+%% CandBirds = [{FrameCount, WeightsList}, {FrameCount, WeightsList}]
 handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_state=CurrState, pcList=PC_List, pcsInSimulation=PCsInSimulation, bestCandBirds=BestCandBirds})->
 	?PRINT(pc_finished_simulation, ''),
 	NewState = case CurrState of
@@ -241,13 +242,14 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				todo,      % TODO hd(PC_List) all code!!
 				case PCsInSimulation of     % how many PCs are running (birds) simulation now
 					0 ->
+						?PRINT('PCsInSimulation_0', " "),
 						todo,
 						State;
 					
 					_Else ->
-%%						?PRINT('length(BirdList)', length(BirdList)),
 						case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location
 							true  ->
+								?PRINT('length(BirdList)', length(BirdList)),
 								gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 								case Has_changed_dir of
@@ -262,9 +264,9 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 										NewSpikesAmount = SpikesAmount,
 										NewScore = Score
 								end,
-								State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 							
-							false ->                % TODO delete?
+							false ->                % TODO delete?birdList=[],
 								State
 						end
 				end
@@ -279,6 +281,8 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 %% =================================================================
 handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
 													birdUser=#bird{y=Y}, bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
+	
+%%	?PRINT('BirdList', BirdList),
 	
 	DC = wxPaintDC:new(Panel),
 	%wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
@@ -397,8 +401,8 @@ merge_birds(BestCandBirds, CandBirds) ->
 
 merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
 merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
-	{FrameCount1, _WeightsMap1} = Bird1,
-	{FrameCount2, _WeightsMap2} = Bird2,
+	{FrameCount1, _WeightsList1} = Bird1,
+	{FrameCount2, _WeightsList2} = Bird2,
 	case FrameCount1 < FrameCount2 of
 		true  -> merge_birds([Bird1|CandBirds1], CandBirds2, BestCandBirds ++ [Bird2], BirdsToChoose-1);
 		false -> merge_birds(CandBirds1, [Bird2|CandBirds2], BestCandBirds ++ [Bird1], BirdsToChoose-1)

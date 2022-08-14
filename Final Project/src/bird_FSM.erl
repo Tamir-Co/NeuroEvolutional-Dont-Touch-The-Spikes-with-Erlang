@@ -40,14 +40,14 @@ callback_mode() ->
 %% =================================================================
 % idle(enter, _OldState, Bird=#bird{}) ->
 % {keep_state, #bird{}}.
-idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
+%%idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
+%%	{keep_state, Bird};
+idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
+	?PRINT('NewWeightsMap for bird', NewBrain),
+	NN_PID ! {set_weights, NewBrain},
 	{keep_state, Bird};
-idle(info, {replace_genes, NewWeightsMap}, Bird=#bird{nnPID = NN_PID}) ->
-%%	NextBird = replace_genes(Genes),
-	?PRINT('NewWeightsMap for bird', NewWeightsMap),
-	NN_PID ! {set_weights, NewWeightsMap},
-	{keep_state, Bird};
-idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
+idle(info, {start_simulation}, Bird=#bird{nnPID = NN_PID, graphicState=GraphicState}) ->
+	?PRINT(process_NN_info, process_info(NN_PID, message_queue_len)),
 	case GraphicState of
 		idle ->
 			{next_state, simulation, Bird#bird{graphicState=play_user}};    % graphics init this bird from the beginning
@@ -63,8 +63,6 @@ simulation(cast, {spikes_list, SpikesList}, Bird) ->
 	{keep_state, Bird#bird{spikesList = SpikesList}};
 simulation(cast, {jump}, Bird=#bird{spikesList=_SpikesList}) ->
 	NextBird = jump(Bird),
-%%	#bird{x=X, y=Y, direction=Direction} = NextBird,
-%%	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird};
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->	% play_user
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
@@ -73,6 +71,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			wx_object:cast(graphics, {user_bird_disqualified}),  % notify graphics that its bird dead
 			io:format("Game Over!~n"),
 			{next_state, idle, #bird{}};
+		
 		false ->
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
 			wx_object:cast(graphics, {bird_location, X, Y, Direction}),
@@ -80,14 +79,14 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 	end;
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
 											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
+	?PRINT(simulate_frame_play_NEAT, " "),
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
 			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
-				{weightsMap, WeightsMap} ->
-%%	?PRINT('bird_received_weights!!!!!!!!!', ""),
-						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsMap}),   % send bird_disqualified to PC
+				{weightsMap, WeightsList} ->
+						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC
 						{next_state, idle, #bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;
 			
@@ -142,11 +141,6 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
 closest_spike(Y) ->
 	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP_Y,
 	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
-
-
-%% Replaces the genes of the bird using random mutations on other good genes
-replace_genes(_Genes) ->
-	todo.
 
 %% =================================================================
 terminate(_Reason, _StateName, _State) ->
