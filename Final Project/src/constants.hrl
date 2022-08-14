@@ -111,7 +111,7 @@
 	y = ?BIRD_START_Y,
 	velocityY = 0,
 	direction = r,
-	pc_pid,
+	pcPID,
 	spikesList = lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
 	nnPID,
 	graphicState = idle,

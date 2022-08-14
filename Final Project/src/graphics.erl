@@ -216,56 +216,59 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, pcsInSimulation=PCsInSimulation}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	NewState = case CurrState of
-				  idle		->  wxSizer:hide(UiSizer, JumpSizer, []),
-								wxSizer:show(UiSizer, StartSizer, []),
-								wxSizer:layout(MainSizer),
-								State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=init_spike_list()};	%, score=0
-
-				  play_user -> 	gen_statem:cast(BirdUserPID, {simulate_frame}),
+		idle ->
+				wxSizer:hide(UiSizer, JumpSizer, []),
+				wxSizer:show(UiSizer, StartSizer, []),
+				wxSizer:layout(MainSizer),
+				State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=init_spike_list()};	%, score=0
+		
+		play_user ->
+				gen_statem:cast(BirdUserPID, {simulate_frame}),
+				{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+				case Has_changed_dir of
+					true  -> sound_proc ! "bonus_trim",
+							 NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
+							 gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),	%SpikesList,
+							 NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+							 NewScore = Score + 1;
+					false -> NewSpikesList = SpikesList,
+							 NewSpikesAmount = SpikesAmount,
+							 NewScore = Score
+				end,
+				State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+				
+		play_NEAT ->
+				todo,      % TODO hd(PC_List) all code!!
+				case PCsInSimulation of     % how many PCs are running (birds) simulation now
+					0 ->
+						todo,
+						State;
+					
+					_Else ->
+						?PRINT('length(BirdList)', length(BirdList)),
+						case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location
+							true  ->
+								gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 								case Has_changed_dir of
-									true  -> sound_proc ! "bonus_trim",
-											 NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-											 gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),	%SpikesList,
-											 NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
-											 NewScore = Score + 1;
-									false -> NewSpikesList = SpikesList,
-											 NewSpikesAmount = SpikesAmount,
-											 NewScore = Score
-								end,
-								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
-								
-				  play_NEAT	->  todo,      % TODO hd(PC_List) all code!!
-					            case PCsInSimulation of     % how many PCs are running (birds) simulation now
-					                0 ->
-						                todo,
-						                State;
+									true  ->
+										NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
+										gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
+										NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+										NewScore = Score + 1;
 									
-									_Else ->
-										?PRINT('length(BirdList)', length(BirdList)),
-										case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location
-											true  ->
-												gen_server:cast(hd(PC_List), {simulate_frame}),
-												{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-												case Has_changed_dir of
-													true  ->
-														NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-														gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-														NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
-														NewScore = Score + 1;
-													
-													false ->
-														NewSpikesList = SpikesList,
-														NewSpikesAmount = SpikesAmount,
-														NewScore = Score
-												end,
-												State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
-											
-											false ->                % TODO delete?
-												State
-										end
-								end
-			  end,
+									false ->
+										NewSpikesList = SpikesList,
+										NewSpikesAmount = SpikesAmount,
+										NewScore = Score
+								end,
+								State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+							
+							false ->                % TODO delete?
+								State
+						end
+				end
+			end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
 	{noreply, NewState};

@@ -28,11 +28,11 @@ init([PC_PID, SpikesList, GraphicState]) ->
 		idle        -> NN_PID = undefined;
 		play_NEAT   -> NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end) % init NN
 	end,
-	{ok, idle, #bird{	pc_pid=PC_PID,
-						spikesList = SpikesList,
-						graphicState=GraphicState,
-						nnPID = NN_PID
-					}}.
+	{ok, idle, #bird{pcPID = PC_PID,
+					 spikesList = SpikesList,
+					 graphicState = GraphicState,
+					 nnPID = NN_PID
+					 }}.
 
 callback_mode() ->
 	state_functions.
@@ -67,7 +67,7 @@ simulation(cast, {jump}, Bird=#bird{spikesList=_SpikesList}) ->
 %%	#bird{x=X, y=Y, direction=Direction} = NextBird,
 %%	gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
 	{keep_state, NextBird};
-simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->     % play_user
+simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->	% play_user
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
@@ -79,22 +79,24 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			wx_object:cast(graphics, {bird_location, X, Y, Direction}),
 			{keep_state, NextBird}
 	end;
-simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT}) ->     % play_NEAT
+simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
+											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
+	#bird{} = Bird,
 	case IsDead of
 		true ->
-			Bird#bird.nnPID ! {get_weights, self()},    % get weights from the NN
+			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
 				{weightsMap, WeightsMap} ->
-						gen_server:cast(Bird#bird.pc_pid, {bird_disqualified, self(), Bird#bird.frameCount, WeightsMap}),   % send bird_disqualified to PC
-						{next_state, idle, #bird{}}
+						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsMap}),   % send bird_disqualified to PC
+						{next_state, idle, #bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;
 			
 		false ->
 			run_NN(NextBird),
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
-			gen_server:cast(Bird#bird.pc_pid, {bird_location, X, Y, Direction}),
-			{keep_state, NextBird#bird{frameCount=Bird#bird.frameCount + 1}}
+			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
+			{keep_state, NextBird#bird{frameCount = FrameCount + 1}}
 	end.
 
 
