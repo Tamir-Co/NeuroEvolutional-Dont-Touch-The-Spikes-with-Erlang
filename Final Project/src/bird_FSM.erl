@@ -44,8 +44,7 @@ idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
 	{keep_state, Bird};
 idle(info, {replace_genes, NewWeightsMap}, Bird=#bird{nnPID = NN_PID}) ->
 %%	NextBird = replace_genes(Genes),
-	?PRINT('{Bird, NN_PID}', {Bird, NN_PID}),
-	?PRINT('', "~n~n~n~n"),
+	?PRINT('NewWeightsMap for bird', NewWeightsMap),
 	NN_PID ! {set_weights, NewWeightsMap},
 	{keep_state, Bird};
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
@@ -82,12 +81,12 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
 											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
-	#bird{} = Bird,
 	case IsDead of
 		true ->
 			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
 				{weightsMap, WeightsMap} ->
+%%	?PRINT('bird_received_weights!!!!!!!!!', ""),
 						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsMap}),   % send bird_disqualified to PC
 						{next_state, idle, #bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;

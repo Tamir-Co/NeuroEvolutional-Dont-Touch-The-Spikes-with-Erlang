@@ -105,6 +105,7 @@ configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
 %% Extract from WeightsMap the relevant weights that inputs to NeuronPID, and return them in a map
 extract_weights(WeightsMap, NeuronPID) ->   % WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight }
 	WeightsMapNeuron = #{},
+%%	?PRINT('WeightsMap======================================', WeightsMap),
 	maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID])
 	% #{ LeftNeuronPID => Weight }
 	.
@@ -116,7 +117,7 @@ decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, n_PIDsLayers
 	OutputNeuronPID = hd(maps:get({layer, length(?NN_STRUCTURE)}, N_PIDsLayersMap)),
 	receive
 		{neuron, OutputNeuronPID, IsJump} ->
-				io:format("BirdWallDistance: ~p,IsJump: ~p~n", [BirdWallDistance, IsJump]),
+%%				io:format("BirdWallDistance: ~p,IsJump: ~p~n", [BirdWallDistance, IsJump]),
 				case IsJump > 0 of
 					true  -> true;    % jump
 					false -> false

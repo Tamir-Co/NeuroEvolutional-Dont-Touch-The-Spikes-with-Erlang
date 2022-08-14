@@ -126,8 +126,8 @@ handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcLis
 %%	NewState = State#graphics_state{birdList=BirdList ++ [NewBird]},
 %%	{noreply, NewState};
 
-handle_cast(M={bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdUser=Bird, birdList=BirdList})->
-	io:format("M=: ~p~n", [M]),
+handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdUser=Bird, birdList=BirdList})->
+%%	io:format("M=: ~p~n", [M]),
 	NewBird = Bird#bird{x=X, y=Y, direction=Direction},
 	case CurrState of
 		play_user ->
@@ -245,7 +245,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 						State;
 					
 					_Else ->
-						?PRINT('length(BirdList)', length(BirdList)),
+%%						?PRINT('length(BirdList)', length(BirdList)),
 						case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location
 							true  ->
 								gen_server:cast(hd(PC_List), {simulate_frame}),
@@ -391,11 +391,11 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 
 
 %% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
-merge_birds([], CandBirds) -> CandBirds;
+merge_birds([], CandBirds) -> element(2, lists:unzip(CandBirds));
 merge_birds(BestCandBirds, CandBirds) ->
-	merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS).	% we only choose ceil(0.1*N) of all birds
+	element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS))).     % we only choose ceil(0.1*N) of all birds
 
-merge_birds(_, _, BestCandBirds, 0) -> element(2, lists:unzip(BestCandBirds));
+merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
 merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
 	{FrameCount1, _WeightsMap1} = Bird1,
 	{FrameCount2, _WeightsMap2} = Bird2,

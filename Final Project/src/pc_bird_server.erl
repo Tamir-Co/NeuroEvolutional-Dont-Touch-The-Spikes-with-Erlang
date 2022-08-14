@@ -67,7 +67,6 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsMap}, State=#pc_bird
 	case NumOfAliveBirds of
 		1 ->
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
-			?PRINT(sorted_bird_list, SortedBirds),
 			{_, CandBirds} = lists:split(?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
 			wx_object:cast(graphics, {pc_finished_simulation, CandBirds});
 		_Else ->
@@ -109,11 +108,15 @@ create_mutations_and_send([BirdPID|BirdsListPID_T], [WeightsMap|WeightsMapListT]
 mutate_brain_and_send(BirdsListPID, _WeightsMap, 0) -> BirdsListPID;
 mutate_brain_and_send([BirdPID|BirdsListPID_T], WeightsMap, NumOfMutations) ->
 	MutatedWeightsMap = mutate_brain(WeightsMap),
+	?PRINT('MutatedWeightsMap PC!!!!', MutatedWeightsMap),
 	BirdPID ! {replace_genes, MutatedWeightsMap},
 	mutate_brain_and_send(BirdsListPID_T, WeightsMap, NumOfMutations-1).
 
 %% Mutate a weight map (brain) randomly.
 %% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
 mutate_brain(WeightsMap) ->
-	maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
-	maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]).
+	?PRINT('FNJDONFDJOFN WeightsMap', WeightsMap),
+	MutateBiasesWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
+	MutateWeightsWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]),
+	maps:merge(MutateBiasesWeightsMap, MutateWeightsWeightsMap).
+	
