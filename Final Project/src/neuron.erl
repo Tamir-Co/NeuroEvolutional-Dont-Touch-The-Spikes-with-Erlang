@@ -35,7 +35,6 @@ init() ->
 loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
 	receive
 		{neuron, From, A} ->
-			?PRINT('neuron get {neuron, From, A}', " "),
 				case lists:member(From, RemInPIDs) of		% is the sender legal
 					true  -> ok;
 					false -> exit("illegal neuron sender!!!")
@@ -47,7 +46,6 @@ loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 												origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
 					false -> MyA = activation_func(Activation, Z + Bias),
 							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
-							 ?PRINT('neuron sent OUTPUT to NN', " "),
 							 loop(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
 								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
 				end;

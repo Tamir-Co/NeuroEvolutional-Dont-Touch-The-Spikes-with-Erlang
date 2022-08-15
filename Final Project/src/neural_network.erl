@@ -27,6 +27,7 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 	receive
 		{set_weights, NewWeightsList} ->
 				NewWeightsMap = set_weights(NewWeightsList, WeightsMap),
+			?PRINT('NewWeightsMap for NN', NewWeightsMap),
 				configure_NN(NewWeightsMap, N_PIDsList),
 				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 
@@ -38,8 +39,9 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 				loop(NN_Data);
 
 		{get_weights, From} ->
-				?PRINT('lists:sort(ordering, maps:to_list(WeightsMap))', lists:sort(fun(Edge1, Edge2) -> ordering(Edge1, Edge2) end, maps:to_list(WeightsMap))),
-				From ! {weights_list, lists:sort(fun(Edge1, Edge2) -> ordering(Edge1, Edge2) end, maps:to_list(WeightsMap))},  % send the bird its "brain" (weights) as a list
+				SortedWeightsByIdx = lists:sort(fun(Edge1, Edge2) -> ordering(Edge1, Edge2) end, maps:to_list(WeightsMap)),
+				{_Edges, Weights} = lists:unzip(SortedWeightsByIdx),
+				From ! {weights_list, Weights},  % send the bird its "brain" (weights) as a list
 				loop(NN_Data)
 	end.
 

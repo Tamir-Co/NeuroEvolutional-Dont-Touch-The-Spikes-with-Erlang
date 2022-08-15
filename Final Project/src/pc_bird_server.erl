@@ -79,9 +79,9 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	end,
 	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
-handle_cast({populate_next_gen, ListOfBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
-	?PRINT('{populate_next_gen, ListOfBrains}', ListOfBrains),
-	create_mutations_and_send(maps:keys(BirdsMap), ListOfBrains),    % create mutations and send the new weights to the birds
+handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
+	?PRINT('{populate_next_gen, BestBrains}', BestBrains),
+	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
 	{noreply, State#pc_bird_server_state{}}.
 
 %% =================================================================
@@ -106,10 +106,14 @@ msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 %% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
 %create_mutations_and_send([], Sxfx) -> finish;
 create_mutations_and_send([], []) -> finish;
-create_mutations_and_send([BirdPID|BirdsListPID_T], [Brain|BrainT]) ->
-	BirdPID ! {replace_genes, Brain},     % keep each "brain" once
-	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
-	create_mutations_and_send(RemainingPIDs, BrainT).  % mutate the remaining brains
+create_mutations_and_send(BirdsListPID, [Brain|BrainT]) ->
+	RemainingPIDs = mutate_brain_and_send(BirdsListPID, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
+	case RemainingPIDs of
+		[] -> finish;
+		[BirdPID|BirdsListPID_T] ->
+			BirdPID ! {replace_genes, Brain},     % keep each "brain" once
+			create_mutations_and_send(BirdsListPID_T, BrainT)  % mutate the remaining brains
+	end.
 
 %% Mutate each weight list ?9? times, then send it to the birds.
 mutate_brain_and_send(BirdsListPID, _Brain, 0) -> BirdsListPID;
