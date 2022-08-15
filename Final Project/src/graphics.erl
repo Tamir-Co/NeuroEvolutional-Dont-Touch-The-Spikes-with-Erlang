@@ -116,6 +116,7 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcLi
 	case WaitForPCsAmount of
 		1 ->
 			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
+			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation}};	% only after all birds had initialized, the graphics_state changes its state.
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
@@ -132,13 +133,9 @@ handle_cast(M={bird_location, X, Y, Direction}, State=#graphics_state{curr_state
 	end,
 	{noreply, NewState};
 
-handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = CurrState})->
-	NewState =
-		case CurrState of
-			play_user ->
-				sound_proc ! "lose_trim",
-				State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT}
-		end,
+handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_user})->
+	sound_proc ! "lose_trim",
+	NewState = State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT},
 	{noreply, NewState};
 
 %% CandBirds = [{FrameCount, WeightsList}, {FrameCount, WeightsList}]
@@ -152,7 +149,7 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 				FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
 				send_best_birds(FinalBestCandBirds, PC_List),
 				
-				State#graphics_state{curr_state=play_NEAT_population, waitForPCsAmount=length(PC_List), bestCandBirds=[]};
+				State#graphics_state{curr_state=play_NEAT_population, waitForPCsAmount=length(PC_List), bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=init_spike_list()};
 			
 			_Else ->
 				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
@@ -163,7 +160,9 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount})->
 	case WaitForPCsAmount of
 		1 ->
+			?PRINT('pc_finished_population!!!!!!!!!!!!!!!!!!'),
 			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
+			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation}};	% only after all birds had initialized, the graphics_state changes its state.
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
