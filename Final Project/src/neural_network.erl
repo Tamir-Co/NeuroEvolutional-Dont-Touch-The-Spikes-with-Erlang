@@ -94,8 +94,9 @@ rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->
 %% Configure all the neurons within the neural network using the WeightsMap
 configure_NN(_WeightsMap, []) -> void;
 configure_NN(WeightsMap, [LastNeuronPID]) ->
-	Weights = extract_weights(WeightsMap, LastNeuronPID),
-	
+	Weights = maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID]),
+%%	Weights = extract_weights(WeightsMap, LastNeuronPID),
+
 %%	Bias    = maps:get({Idx, bias, LastNeuronPID}, WeightsMap),
 	Pred = fun({_Idx, bias, PID}, _V) when PID == LastNeuronPID -> true; (_,_) -> false end,
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
@@ -104,27 +105,24 @@ configure_NN(WeightsMap, [LastNeuronPID]) ->
 	OutPIDs = [self()],
 	LastNeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs};
 configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
-	Weights = extract_weights(WeightsMap, NeuronPID),
-	
+	Weights = maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID]),
+%%	Weights = extract_weights(WeightsMap, NeuronPID),
 %%	Bias    = maps:get({Idx, bias, NeuronPID}, WeightsMap),
 	Pred = fun({_Idx, bias, PID}, _V) when PID == NeuronPID -> true; (_,_) -> false end,
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
-	
 	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
 	OutPIDs = [RightNeuronPID || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID  == NeuronPID],
-	
-	?PRINT('NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs}', NeuronPID),
-	
 	NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs},
 	configure_NN(WeightsMap, NeuronPID_T).
 
+
 %% Extract from WeightsMap the relevant weights that inputs to NeuronPID, and return them in a map
-extract_weights(WeightsMap, NeuronPID) ->   % WeightsMap = #{ {Idx, weight, LeftNeuronPID, RightNeuronPID} => Weight }
-	WeightsMapNeuron = #{},
+%%extract_weights(WeightsMap, NeuronPID) ->   % WeightsMap = #{ {Idx, weight, LeftNeuronPID, RightNeuronPID} => Weight }
+%%	WeightsMapNeuron = #{},
 %%	?PRINT('WeightsMap======================================', WeightsMap),
-	maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID])
-	% #{ LeftNeuronPID => Weight }
-	.
+%%	maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID])
+	% #{ LeftNeuronPID => Weight }.
+
 
 %% Feed-forward the input game data, and using the nn_data to determine whether to jump right now
 decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, n_PIDsLayersMap=N_PIDsLayersMap},
@@ -134,6 +132,7 @@ decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, n_PIDsLayers
 %%	?PRINT(decide_jump_OutputNeuronPID, OutputNeuronPID),
 	receive_NN_output(OutputNeuronPID).
 	
+
 receive_NN_output(OutputNeuronPID) ->
 	receive
 		{neuron, OutputNeuronPID, IsJump} ->
@@ -142,6 +141,7 @@ receive_NN_output(OutputNeuronPID) ->
 		
 		Else -> ?PRINT('Else ', Else), receive_NN_output(OutputNeuronPID)
 	end.
+
 
 %% Feed the neural network with its inputs
 feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList) ->

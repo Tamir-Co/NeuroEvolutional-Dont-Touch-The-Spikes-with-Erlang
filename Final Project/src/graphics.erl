@@ -124,8 +124,8 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcLi
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
 
-handle_cast(M={bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
-	io:format("M=: ~p~n", [M]),
+handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
+%%	io:format("M=: ~p~n", [M]),
 	NewBird = #bird{x=X, y=Y, direction=Direction},
 	case CurrState of
 		play_user ->
@@ -173,7 +173,7 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 %% =================================================================
 %% We reach here each button press
 handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
-																							  pcList=PC_List, curr_state=CurrState, bird_x=_Bird_x, bird_direction=_Bird_dir,
+																							  pcList=PC_List, bird_x=_Bird_x, bird_direction=_Bird_dir,
 																							  spikesList=SpikesList, score=Score, bestScore=BestScore, birdUserPID=BirdUserPID}) ->
 	NewState = case ID of
 		?ButtonStartUserID ->
@@ -223,7 +223,7 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
 										 pcList=PC_List, birdList=BirdList, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
-										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, waitForPCsAmount=WaitForPCsAmount}) ->  % refresh screen for graphics
+										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	NewState = case CurrState of
 		idle ->

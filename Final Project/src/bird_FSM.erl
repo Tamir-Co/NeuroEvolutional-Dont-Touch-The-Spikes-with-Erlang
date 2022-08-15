@@ -46,7 +46,7 @@ idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replac
 %%	?PRINT('NewWeightsMap for bird', NewBrain),
 	NN_PID ! {set_weights, NewBrain},
 	{keep_state, Bird};
-idle(info, {start_simulation}, Bird=#bird{nnPID=NN_PID, graphicState=GraphicState}) ->
+idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
 		idle ->
 			{next_state, simulation, Bird#bird{graphicState=play_user}};    % graphics init this bird from the beginning
@@ -96,7 +96,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			run_NN(NextBird),
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
 			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
-			?PRINT(simulate_frame_play_NEAT_NOT_DEAD),
+%%			?PRINT(simulate_frame_play_NEAT_NOT_DEAD),
 			{keep_state, NextBird#bird{frameCount = FrameCount + 1}}
 	end.
 
