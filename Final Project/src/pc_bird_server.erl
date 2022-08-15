@@ -55,8 +55,6 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{birdsMap = Bi
 
 handle_cast({simulate_frame}, State=#pc_bird_server_state{birdsMap = BirdsMap}) ->  % TODO send only to alive birds
 %%	gen_statem:cast(hd(BirdList), {simulate_frame}),
-	?PRINT(process_bird1_info, process_info(hd(maps:keys(BirdsMap)), message_queue_len)),
-%%	?PRINT(process_bird2_info, process_info(lists:last(maps:keys(BirdsMap)), message_queue_len)),
 	msg_all_birds(maps:keys(BirdsMap), {simulate_frame}, false),
 	{noreply, State};
 
@@ -69,10 +67,10 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsList}},
 	case NumOfAliveBirds of
 		1 ->
-			?PRINT('', " "),
+			?PRINT(),
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
-			?PRINT('lists:split(?NUM_OF_SURVIVED_BIRDS, SortedBirds)', CandBirds),
+%%			?PRINT('lists:split(?NUM_OF_SURVIVED_BIRDS, SortedBirds)', CandBirds),
 			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds});
 		_Else ->
 			ok
@@ -80,7 +78,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
-	?PRINT('{populate_next_gen, BestBrains}', BestBrains),
+%%	?PRINT('{populate_next_gen, BestBrains}', BestBrains),
 	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
 	wx_object:cast(graphics, {pc_finished_population, self()}),
 	{noreply, State#pc_bird_server_state{}}.

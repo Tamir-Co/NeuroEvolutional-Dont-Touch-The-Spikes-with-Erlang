@@ -64,7 +64,7 @@ construct_neurons(NeuronsAmount, PIDs) ->
 
 %% Create random weights and biases
 rand_weights(N_PIDsLayersMap) ->
-	?PRINT('N_PIDsLayersMap', N_PIDsLayersMap),
+%%	?PRINT('N_PIDsLayersMap', N_PIDsLayersMap),
 	rand_weights(N_PIDsLayersMap, #{}, 1, length(?NN_STRUCTURE)+1, 1).
 
 rand_weights(_N_PIDsLayersMap, WeightsMap, NumOfLayers_1, NumOfLayers_1, _Idx) -> WeightsMap;
@@ -110,8 +110,11 @@ configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
 	Pred = fun({_Idx, bias, PID}, _V) when PID == NeuronPID -> true; (_,_) -> false end,
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
 	
-	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
-	OutPIDs = [RightNeuronPID || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID == NeuronPID],
+	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
+	OutPIDs = [RightNeuronPID || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID  == NeuronPID],
+	
+	?PRINT('NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs}', NeuronPID),
+	
 	NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs},
 	configure_NN(WeightsMap, NeuronPID_T).
 
@@ -128,15 +131,16 @@ decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, n_PIDsLayers
 			BirdHeight, BirdWallDistance, SpikesList) ->
 	feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList),
 	OutputNeuronPID = hd(maps:get({layer, length(?NN_STRUCTURE)}, N_PIDsLayersMap)),
-	?PRINT(decide_jump_OutputNeuronPID, OutputNeuronPID),
+%%	?PRINT(decide_jump_OutputNeuronPID, OutputNeuronPID),
+	receive_NN_output(OutputNeuronPID).
+	
+receive_NN_output(OutputNeuronPID) ->
 	receive
 		{neuron, OutputNeuronPID, IsJump} ->
-				io:format("BirdWallDistance: ~p,IsJump: ~p~n", [BirdWallDistance, IsJump]),
-				case IsJump > 0 of
-					true  -> true;    % jump
-					false -> false
-				end;
-		Else -> ?PRINT('Else', Else)
+				io:format("IsJump: ~p~n", [IsJump]),
+				IsJump > 0;
+		
+		Else -> ?PRINT('Else ', Else), receive_NN_output(OutputNeuronPID)
 	end.
 
 %% Feed the neural network with its inputs

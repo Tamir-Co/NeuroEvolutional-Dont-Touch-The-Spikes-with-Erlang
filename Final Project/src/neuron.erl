@@ -27,13 +27,19 @@ test()->
 	end.
 
 init() ->
-	receive
-		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
-				loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
-	end.
+	loop(#neuron_data{}).
+%%	receive
+%%		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
+%%				loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
+%%	end.
 
 loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
+	?PRINT(loop_neuron),
 	receive
+		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
+				?PRINT('{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs}'),
+				loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs});
+		
 		{neuron, From, A} ->
 				case lists:member(From, RemInPIDs) of		% is the sender legal
 					true  -> ok;
@@ -46,13 +52,11 @@ loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 												origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
 					false -> MyA = activation_func(Activation, Z + Bias),
 							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
+							 ?PRINT('{neuron, self(), MyA}', {neuron, self(), MyA}),
 							 loop(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
 								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
-				end;
-		
-		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
-				loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
-	end.
+				end
+		end.
 
 %% =================================================================
 activation_func(tanh, Z) -> math:tanh(Z);

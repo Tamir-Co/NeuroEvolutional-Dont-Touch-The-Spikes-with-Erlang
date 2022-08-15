@@ -146,8 +146,8 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
-				?PRINT('case PCsInSimulation of, BestCandBirds:', BestCandBirds),
-				?PRINT('case PCsInSimulation of, CandBirds:', CandBirds),
+%%				?PRINT('case PCsInSimulation of, BestCandBirds:', BestCandBirds),
+%%				?PRINT('case PCsInSimulation of, CandBirds:', CandBirds),
 				FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
 				send_best_birds(FinalBestCandBirds, PC_List),
 				
