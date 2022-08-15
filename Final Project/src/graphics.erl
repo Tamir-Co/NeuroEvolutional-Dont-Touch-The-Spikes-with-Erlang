@@ -242,14 +242,14 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				todo,      % TODO hd(PC_List) all code!!
 				case PCsInSimulation of     % how many PCs are running (birds) simulation now
 					0 ->
-						?PRINT('PCsInSimulation_0', " "),
+						?PRINT('PCsInSimulation_are_0', " "),
 						todo,
 						State;
 					
 					_Else ->
 						case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location
 							true  ->
-								?PRINT('length(BirdList)', length(BirdList)),
+%%								?PRINT('length(BirdList)', length(BirdList)),
 								gen_server:cast(hd(PC_List), {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 								case Has_changed_dir of

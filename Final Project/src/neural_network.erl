@@ -38,7 +38,8 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 				loop(NN_Data);
 
 		{get_weights, From} ->
-				From ! {weightsMap, lists:keysort(1, maps:to_list(WeightsMap))},  % send the bird its "brain" (weights) as a list
+				?PRINT('lists:keysort(1, maps:to_list(WeightsMap))', lists:keysort(1, maps:to_list(WeightsMap))),
+				From ! {weights_list, lists:keysort(1, maps:to_list(WeightsMap))},  % send the bird its "brain" (weights) as a list
 				loop(NN_Data)
 	end.
 
@@ -97,7 +98,7 @@ configure_NN(WeightsMap, [LastNeuronPID]) ->
 	Pred = fun({_Idx, bias, PID}, _V) when PID == LastNeuronPID -> true; (_,_) -> false end,
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
 	
-	InPIDs  = [LeftNeuronPID  || {weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID],
+	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID],
 	OutPIDs = [self()],
 	LastNeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs};
 configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
@@ -107,13 +108,13 @@ configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
 	Pred = fun({_Idx, bias, PID}, _V) when PID == NeuronPID -> true; (_,_) -> false end,
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
 	
-	InPIDs  = [LeftNeuronPID  || {weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
-	OutPIDs = [RightNeuronPID || {weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID == NeuronPID],
+	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
+	OutPIDs = [RightNeuronPID || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID == NeuronPID],
 	NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs},
 	configure_NN(WeightsMap, NeuronPID_T).
 
 %% Extract from WeightsMap the relevant weights that inputs to NeuronPID, and return them in a map
-extract_weights(WeightsMap, NeuronPID) ->   % WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight }
+extract_weights(WeightsMap, NeuronPID) ->   % WeightsMap = #{ {Idx, weight, LeftNeuronPID, RightNeuronPID} => Weight }
 	WeightsMapNeuron = #{},
 %%	?PRINT('WeightsMap======================================', WeightsMap),
 	maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID])

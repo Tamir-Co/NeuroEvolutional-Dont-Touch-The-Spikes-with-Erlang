@@ -55,6 +55,8 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{birdsMap = Bi
 
 handle_cast({simulate_frame}, State=#pc_bird_server_state{birdsMap = BirdsMap}) ->  % TODO send only to alive birds
 %%	gen_statem:cast(hd(BirdList), {simulate_frame}),
+	?PRINT(process_bird1_info, process_info(hd(maps:keys(BirdsMap)), message_queue_len)),
+%%	?PRINT(process_bird2_info, process_info(lists:last(maps:keys(BirdsMap)), message_queue_len)),
 	msg_all_birds(maps:keys(BirdsMap), {simulate_frame}, false),
 	{noreply, State};
 

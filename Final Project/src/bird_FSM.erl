@@ -61,7 +61,7 @@ idle(info, {start_simulation}, Bird=#bird{nnPID = NN_PID, graphicState=GraphicSt
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
 	{keep_state, Bird#bird{spikesList = SpikesList}};
-simulation(cast, {jump}, Bird=#bird{spikesList=_SpikesList}) ->
+simulation(cast, {jump}, Bird=#bird{}) ->
 	NextBird = jump(Bird),
 	{keep_state, NextBird};
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->	% play_user
@@ -79,13 +79,15 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 	end;
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
 											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
+	?PRINT('', " "),
 	?PRINT(simulate_frame_play_NEAT, " "),
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
+			?PRINT(simulate_frame_play_NEAT_DEAD, " "),
 			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
-				{weightsMap, WeightsList} ->
+				{weights_list, WeightsList} ->
 						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC
 						{next_state, idle, #bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;
@@ -94,6 +96,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			run_NN(NextBird),
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
 			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
+			?PRINT(simulate_frame_play_NEAT_NOT_DEAD, " "),
 			{keep_state, NextBird#bird{frameCount = FrameCount + 1}}
 	end.
 
