@@ -88,6 +88,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
 				{weights_list, WeightsList} ->
+						?PRINT('WeightsList of the DEAD bird', WeightsList),
 						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC
 						{next_state, idle, #bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;

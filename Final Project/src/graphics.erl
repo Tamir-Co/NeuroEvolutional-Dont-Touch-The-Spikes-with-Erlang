@@ -151,6 +151,8 @@ handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_stat
 				   play_NEAT ->
 					   case PCsInSimulation of     % how many PCs are running (birds) simulation now
 									1 ->
+										?PRINT('case PCsInSimulation of, BestCandBirds:', BestCandBirds),
+										?PRINT('case PCsInSimulation of, CandBirds:', CandBirds),
 										FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
 										send_best_birds(FinalBestCandBirds, PC_List),
 										State#graphics_state{pcsInSimulation=0, bestCandBirds=[]};  % TODO init pcsInSimulation somewhere
@@ -264,9 +266,9 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 										NewSpikesAmount = SpikesAmount,
 										NewScore = Score
 								end,
-								State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+								State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 							
-							false ->                % TODO delete?birdList=[],
+							false ->                % TODO delete?
 								State
 						end
 				end
@@ -413,6 +415,7 @@ merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose
 %%send_best_birds([], []) -> ok;
 send_best_birds(BestCandBirds, [PC_PID]) -> gen_server:cast(PC_PID, {populate_next_gen, BestCandBirds});
 send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
+	?PRINT('send_best_birds(BestCandBirds', BestCandBirds),
 	{CurrPcWeights, NextPcsWeights} = lists:split(trunc(?NUM_OF_SURVIVED_BIRDS / 1), BestCandBirds),	% TODO divide by the amount of PCs
 	gen_server:cast(PC_PID, {populate_next_gen, CurrPcWeights}),
 	send_best_birds(NextPcsWeights, PC_List).
