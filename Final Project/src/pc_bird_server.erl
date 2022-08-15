@@ -104,14 +104,16 @@ msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
 
 %% Receive Bird PID list and weights map list.
 %% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
-create_mutations_and_send(_BirdsListPID, []) -> finish;
-create_mutations_and_send([BirdPID|BirdsListPID_T], [WeightsList|WeightsListT]) ->
-	BirdPID ! {replace_genes, WeightsList},     % keep each "brain" once
-	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, WeightsList, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
-	create_mutations_and_send(RemainingPIDs, WeightsListT).  % mutate the remaining brains
+%create_mutations_and_send([], Sxfx) -> finish;
+create_mutations_and_send([], []) -> finish;
+create_mutations_and_send([BirdPID|BirdsListPID_T], [Brain|BrainT]) ->
+	BirdPID ! {replace_genes, Brain},     % keep each "brain" once
+	RemainingPIDs = mutate_brain_and_send(BirdsListPID_T, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
+	create_mutations_and_send(RemainingPIDs, BrainT).  % mutate the remaining brains
 
 %% Mutate each weight list ?9? times, then send it to the birds.
-mutate_brain_and_send(BirdsListPID, _WeightsList, 0) -> BirdsListPID;
+mutate_brain_and_send(BirdsListPID, _Brain, 0) -> BirdsListPID;
+mutate_brain_and_send([], _Brain, _NumOfMutations) -> [];
 mutate_brain_and_send([BirdPID|BirdsListPID_T], Brain, NumOfMutations) ->
 	MutatedBrain = mutate_brain(Brain),
 %%	?PRINT('MutatedWeightsMap PC!!!!', MutatedWeightsList),

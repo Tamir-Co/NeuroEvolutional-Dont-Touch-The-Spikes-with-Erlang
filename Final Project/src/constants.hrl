@@ -9,6 +9,9 @@
 -author("Nadav & Tamir").
 
 -define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).
+-define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).
+-define(PRINT(), io:format("~n")).
+
 
 %% Frame structure:
 -define(RIGHT_WALL_X, 350).		% TODO check
@@ -29,8 +32,8 @@
 -define(SPIKES_TOP_Y, 100).
 
 -define(TOP_BOTTOM_SPIKES_AMOUNT, 8).
--define(SPIKES_LEFT_X, 20).%32 | 25		400 - (25 + (36 + 14) * 7).
--define(SPIKE_GAP_X, 9).   %12 | 14
+-define(SPIKES_LEFT_X, 20).
+-define(SPIKE_GAP_X, 9).
 -define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120). % TODO need this?
 -define(TOP_RECT_HEIGHT, 70).
 -define(BOTTOM_RECT_Y, 610). %?BG_HEIGHT-120
