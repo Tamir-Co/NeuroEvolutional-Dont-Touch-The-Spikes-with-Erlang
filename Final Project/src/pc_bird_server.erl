@@ -118,15 +118,25 @@ create_mutations_and_send(BirdsListPID, [Brain|BrainT]) ->
 mutate_brain_and_send(BirdsListPID, _Brain, 0) -> BirdsListPID;
 mutate_brain_and_send([], _Brain, _NumOfMutations) -> [];
 mutate_brain_and_send([BirdPID|BirdsListPID_T], Brain, NumOfMutations) ->
-	MutatedBrain = mutate_brain(Brain),
+	{InputNeuronsWeights, NN_Weights} = lists:split(hd(?NN_STRUCTURE) * 2, Brain),
+	MutatedBrain = InputNeuronsWeights ++ mutate_brain(NN_Weights),
 %%	?PRINT('MutatedWeightsMap PC!!!!', MutatedWeightsList),
 	BirdPID ! {replace_genes, MutatedBrain},
 	mutate_brain_and_send(BirdsListPID_T, Brain, NumOfMutations-1).
 
+
 %% Mutate a weight list (brain) randomly.
 %% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
 mutate_brain(Brain) ->
-	Fun = fun(W) -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR end,     % TODO w*(1+(rand-0.5)/20)
+%%	Fun = fun(W) -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR end,     % TODO W*(1+(rand-0.5)/20)
+	Fun =
+		fun(W) ->
+			case rand:uniform(?MUTATION_MAX_RAND_VAL) of
+				1 -> 0;                                                 % disconnect edge (weight=0)
+				2 -> rand:uniform()-0.5;                                % new weight
+				_ -> W * (1 + (rand:uniform()-0.5) / ?MUTATION_FACTOR)  % change weight
+			end
+	    end,
 	lists:map(Fun, Brain).
 	
 %%mutate_brain(Brain) ->

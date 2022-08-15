@@ -60,6 +60,11 @@ loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 %% =================================================================
 activation_func(tanh, Z) -> math:tanh(Z);
 
+activation_func(relu, Z) -> case 0 < Z of
+								true  -> Z;
+								false -> 0
+                            end;
+
 activation_func(sign, 0)-> 0;
 activation_func(sign, Z)->
 	case Z > 0 of

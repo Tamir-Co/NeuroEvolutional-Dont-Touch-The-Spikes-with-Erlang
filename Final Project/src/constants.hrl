@@ -20,6 +20,7 @@
 
 
 %% Spikes:
+-define(SPIKE_VALUE, 1).
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
 -define(ADD_SPIKES_WALL_TOUCH, 0.5).
@@ -56,10 +57,15 @@
 
 
 %% Neural network:
--define(NN_STRUCTURE, [12, 1]).
+-define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).
 
 -define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_FACTOR, 10).           % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_MAX_RAND_VAL, 20).     % used to define the probability of a edge deletion (W=0)
+
+-define(ACTIVATION_FUNCTION, tanh).
+-define(INPUT_ACTIVATION_FUNCTION, relu).
 
 %% UI IDs:
 -define(ButtonStartUserID, 10).
@@ -132,7 +138,7 @@
 	acc = 0,			% accumulator (Z)
 	weights = #{},		% input weights (W)
 	bias = 0,			% bias (B)
-	activation = tanh,	% activation function (A)
+	activation = ?ACTIVATION_FUNCTION,	% activation function (A)
 	remInPIDs = [],		% remaining input neuron PIDs. Change during the calculation (because of deleting)
 	origInPIDs = [],	% original input neuron PIDs. Doesn't change
 	outPIDs = []		% output neuron PIDs

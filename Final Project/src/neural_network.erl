@@ -19,7 +19,7 @@ init(NetworkStructure) ->
 	WeightsMap = rand_weights(N_PIDsLayersMap),
 %%	io:format("WeightsMap ~p~n~n", [WeightsMap]),
 %%	io:format("self ~p~n", [self()]),
-	configure_NN(WeightsMap, N_PIDsList),
+	configure_NN(WeightsMap, N_PIDsList, 1),
 %%	io:format("N_PIDsLayersMap ~p~n", [N_PIDsLayersMap]),
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList}).
 
@@ -28,7 +28,7 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 		{set_weights, NewWeightsList} ->
 				NewWeightsMap = set_weights(NewWeightsList, WeightsMap),
 			?PRINT('NewWeightsMap for NN', NewWeightsMap),
-				configure_NN(NewWeightsMap, N_PIDsList),
+				configure_NN(NewWeightsMap, N_PIDsList, 1),
 				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 
 		{decide_jump, From, BirdHeight, BirdWallDistance, SpikesList} ->    % TODO send fewer SpikesList
@@ -80,31 +80,42 @@ rand_layer_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->
 
 rand_neuron_weights(_N_PIDsLayersMap, WeightsMap, _LayerIdx, _NeuronsIdx, 0, Idx) -> {WeightsMap, Idx};
 rand_neuron_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, PrevLayerNeuronsIdx, Idx) ->
-	Weight = rand:uniform() -0.5,    % [0,1)
+	Weight = random_weight(Idx),
 	RightNeuronPID = lists:nth(NeuronsIdx, maps:get({layer, LayerIdx}, N_PIDsLayersMap)),
 	LeftNeuronPID  = lists:nth(PrevLayerNeuronsIdx, maps:get({layer, LayerIdx-1}, N_PIDsLayersMap)),
 	NewWeightsMap = WeightsMap#{ {Idx, weight, LeftNeuronPID, RightNeuronPID} => Weight },   % add weight to the map
 	rand_neuron_weights(N_PIDsLayersMap, NewWeightsMap, LayerIdx, NeuronsIdx, PrevLayerNeuronsIdx-1, Idx+1).
 
+random_weight(Idx) ->
+	case Idx =< hd(?NN_STRUCTURE) * 2 of    % ?12? first neurons (input neurons)
+		true -> 1;
+		false ->
+			case rand:uniform(?MUTATION_MAX_RAND_VAL) of
+				1 -> 0;                     % weight=0
+				_ -> rand:uniform() - 0.5   % random new weight
+			end
+	end.
+
 rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->
-	Bias = rand:uniform() - 0.5,    % [-0.5,0.5)
+	case Idx =< hd(?NN_STRUCTURE) * 2 of    % ?12? first neurons (input neurons)
+		true  -> Bias = 0;
+		false -> Bias = (rand:uniform() - 0.5) * 20    % [-0.5,0.5) * 10
+	end,
 	NeuronPID = lists:nth(NeuronsIdx, maps:get({layer, LayerIdx}, N_PIDsLayersMap)),
 	WeightsMap#{ {Idx, bias, NeuronPID} => Bias }.
 
 %% Configure all the neurons within the neural network using the WeightsMap
-configure_NN(_WeightsMap, []) -> void;
-configure_NN(WeightsMap, [LastNeuronPID]) ->
+configure_NN(_WeightsMap, [], _N_Idx) -> void;
+configure_NN(WeightsMap, [LastNeuronPID], _N_Idx) ->
 	Weights = maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID]),
 %%	Weights = extract_weights(WeightsMap, LastNeuronPID),
-
 %%	Bias    = maps:get({Idx, bias, LastNeuronPID}, WeightsMap),
 	Pred = fun({_Idx, bias, PID}, _V) when PID == LastNeuronPID -> true; (_,_) -> false end,
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
-	
 	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID],
 	OutPIDs = [self()],
 	LastNeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs};
-configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
+configure_NN(WeightsMap, [NeuronPID|NeuronPID_T], N_Idx) ->
 	Weights = maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID]),
 %%	Weights = extract_weights(WeightsMap, NeuronPID),
 %%	Bias    = maps:get({Idx, bias, NeuronPID}, WeightsMap),
@@ -112,8 +123,11 @@ configure_NN(WeightsMap, [NeuronPID|NeuronPID_T]) ->
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
 	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID],
 	OutPIDs = [RightNeuronPID || {_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), LeftNeuronPID  == NeuronPID],
-	NeuronPID ! {configure_neuron, Weights, Bias, tanh, InPIDs, OutPIDs},
-	configure_NN(WeightsMap, NeuronPID_T).
+	case N_Idx =< hd(?NN_STRUCTURE) of    % ?12? first neurons (input neurons)
+		true  -> NeuronPID ! {configure_neuron, Weights, Bias, ?INPUT_ACTIVATION_FUNCTION, InPIDs, OutPIDs};
+		false -> NeuronPID ! {configure_neuron, Weights, Bias, ?ACTIVATION_FUNCTION, InPIDs, OutPIDs}
+	end,
+	configure_NN(WeightsMap, NeuronPID_T, N_Idx+1).
 
 
 %% Extract from WeightsMap the relevant weights that inputs to NeuronPID, and return them in a map
@@ -149,13 +163,14 @@ feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList) ->
 	Self = self(),
 	lists:nth(Layer1Len, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdHeight},           % insert BirdHeight
 	lists:nth(Layer1Len-1, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdWallDistance},   % insert BirdWallDistance
-	feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Layer1Len-2).
-	
-feed_inputs(_N_PIDsLayersMap, _BirdHeight, _BirdWallDistance, _SpikesList, 0) -> ok;
-feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Amount) ->
+	feed_spike_list(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Layer1Len-2).
+
+%% Insert spike list
+feed_spike_list(_N_PIDsLayersMap, _BirdHeight, _BirdWallDistance, _SpikesList, 0) -> ok;
+feed_spike_list(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Idx) ->
 	Self = self(),
-	lists:nth(Amount, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, lists:nth(Amount, SpikesList)},
-	feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Amount-1).
+	lists:nth(Idx, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, lists:nth(Idx, SpikesList) * ?SPIKE_VALUE},  % TODO change * (mult)
+	feed_spike_list(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Idx-1).
 
 
 %% returns a new (updated) WeightsMap
