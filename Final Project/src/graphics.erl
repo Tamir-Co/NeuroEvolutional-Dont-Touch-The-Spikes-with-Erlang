@@ -119,7 +119,7 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcLi
 		1 ->
 			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
 			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation}};	% only after all birds had initialized, the graphics_state changes its state.
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
@@ -134,6 +134,9 @@ handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{curr_state=C
 			NewState = State#graphics_state{birdList=BirdList ++ [NewBird]}
 	end,
 	{noreply, NewState};
+
+handle_cast({neat_bird_disqualified}, State=#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=NumOfAliveBirds})->
+	{noreply, State#graphics_state{numOfAliveBirds=NumOfAliveBirds-1}};
 
 handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_user})->
 	sound_proc ! "lose_trim",
@@ -162,10 +165,10 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount})->
 	case WaitForPCsAmount of
 		1 ->
-			?PRINT('pc_finished_population!!!!!!!!!!!!!!!!!!'),
+			?PRINT('pc_finished_population'),
 			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
 			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation}};	% only after all birds had initialized, the graphics_state changes its state.
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end.
@@ -222,7 +225,7 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% =================================================================
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
-										 pcList=PC_List, birdList=BirdList, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
+										 pcList=PC_List, birdList=BirdList, numOfAliveBirds=NumOfAliveBirds, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
 										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	NewState = case CurrState of
@@ -241,6 +244,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 							 gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),	%SpikesList,
 							 NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
 							 NewScore = Score + 1;
+					
 					false -> NewSpikesList = SpikesList,
 							 NewSpikesAmount = SpikesAmount,
 							 NewScore = Score
@@ -249,7 +253,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				
 		play_NEAT_simulation ->
 				todo,      % TODO hd(PC_List) all code!!
-				case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location. TODO bad with PC down
+				case length(BirdList) >= NumOfAliveBirds of   % all birds sent their location. TODO bad with PC down
 					true  ->
 %%						?PRINT('length(BirdList)', length(BirdList)),
 						gen_server:cast(hd(PC_List), {simulate_frame}),

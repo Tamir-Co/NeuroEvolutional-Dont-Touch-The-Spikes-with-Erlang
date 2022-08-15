@@ -8,8 +8,8 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
--define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).
--define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).
+-define(PRINT(Text, Arg), ok).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%
+-define(PRINT(Text),  ok).%io:format(atom_to_list(Text) ++ "~n")).%
 -define(PRINT(), io:format("~n")).
 
 
@@ -51,7 +51,7 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 1).    % TODO 1000 or other number, and move to graphics
+-define(NUM_OF_BIRDS, 100).    % TODO 1000 or other number, and move to graphics
 -define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
 
@@ -93,13 +93,14 @@
 	bitmapBird_L,
 	birdUser,
 	birdUserPID,
-	birdList,
+	birdList = [],
+	numOfAliveBirds = 0,
 	bird_x = ?BIRD_START_X,
 	bird_direction = r,
 	bestCandBirds = [],
 	score = 0,
 	bestScore = 0,
-	curr_state,
+	curr_state = idle,
 	spikesList,
 	spikesAmount = ?INIT_SPIKES_WALL_AMOUNT,
 	pcList,
@@ -112,6 +113,7 @@
 	graphicState = idle,
 	numOfPcBirds,       % amount of PC birds ?250?
 	numOfAliveBirds,    % amount of birds in simulation right now
+	listOfAliveBirds,   % list of PIDs of current alive (in simulation) birds
 	birdsMap            % #{PID => {frameCount, WeightsMap}}
 }).
 

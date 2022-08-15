@@ -26,6 +26,7 @@ init([PC_Name, NumOfPcBirds]) ->
 		graphicState = idle,
 		numOfPcBirds = NumOfPcBirds,
 		numOfAliveBirds = 0,
+		listOfAliveBirds = [],
 		birdsMap = #{}
 	}}.
 
@@ -46,16 +47,16 @@ handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_st
 	{noreply, State#pc_bird_server_state{graphicState=GraphicState, birdsMap=NewBirdsMap}};
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
-	msg_all_birds(maps:keys(BirdsMap), {start_simulation}, true),
-	{noreply, State#pc_bird_server_state{numOfAliveBirds=NumOfPcBirds}};
+	msg_to_birds(maps:keys(BirdsMap), {start_simulation}, true),
+	{noreply, State#pc_bird_server_state{numOfAliveBirds=NumOfPcBirds, listOfAliveBirds=maps:keys(BirdsMap)}};
 
-handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{birdsMap = BirdsMap}) ->
-	msg_all_birds(maps:keys(BirdsMap), {spikes_list, SpikesList}, false),
+handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->
+	msg_to_birds(ListOfAliveBirds, {spikes_list, SpikesList}, false),
 	{noreply, State};
 
-handle_cast({simulate_frame}, State=#pc_bird_server_state{birdsMap = BirdsMap}) ->  % TODO send only to alive birds
+handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->  % TODO send only to alive birds
 %%	gen_statem:cast(hd(BirdList), {simulate_frame}),
-	msg_all_birds(maps:keys(BirdsMap), {simulate_frame}, false),
+	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
 	{noreply, State};
 
 handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
@@ -63,8 +64,10 @@ handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
 %%	?PRINT(bird_location_PC, " "),
 	{noreply, State};
 
-handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
-	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsList}},
+handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
+	wx_object:cast(graphics, {neat_bird_disqualified}),
+	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsList}},  % update birds map
+	NewListOfAliveBirds = ListOfAliveBirds -- [BirdPID],   % bird is dead, remove it from alive birds
 	case NumOfAliveBirds of
 		1 ->
 			?PRINT(),
@@ -75,7 +78,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 		_Else ->
 			ok
 	end,
-	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
+	{noreply, State#pc_bird_server_state{listOfAliveBirds=NewListOfAliveBirds, birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
 %%	?PRINT('{populate_next_gen, BestBrains}', BestBrains),
@@ -91,14 +94,14 @@ start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState) ->
 	start_bird_FSM(NumOfPcBirds-1, PC_Name, SpikesList, BirdsMap#{BirdPID => {0, []}}, GraphicState).
 
 
-%% Send message/cast to all birds
-msg_all_birds([], _Msg, _IsMsg) -> done;
-msg_all_birds([Bird|Bird_T], Msg, IsMsg) ->
+%% Send message/cast to specific birds
+msg_to_birds([], _Msg, _IsMsg) -> done;
+msg_to_birds([Bird|Bird_T], Msg, IsMsg) ->
 	case IsMsg of
 		true -> Bird ! Msg;
-		false-> gen_statem:cast(Bird, Msg)%, ?PRINT(msg_all_birds, Msg)
+		false-> gen_statem:cast(Bird, Msg)%, ?PRINT(msg_to_birds, Msg)
 	end,
-	msg_all_birds(Bird_T, Msg, IsMsg).
+	msg_to_birds(Bird_T, Msg, IsMsg).
 
 
 %% Receive Bird PID list and weights map list.
