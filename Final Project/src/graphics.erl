@@ -89,6 +89,8 @@ init(_Args) ->
 
 	% Init bird servers and split the work
 	{BirdUserPID, BirdServerPID} = init_system(),
+	
+	io:format("BirdUserPID ~p~n", [BirdUserPID]),
 
 	{Frame, #graphics_state{
 		frame = Frame,
@@ -107,7 +109,7 @@ init(_Args) ->
 		birdList = [],
 		curr_state = idle,
 		spikesList = init_spike_list(),
-		pcList = [BirdServerPID],
+		pcList = [BirdServerPID],     % TODO
 		waitForPCsAmount = 1     % TODO change to define - the length of PCs list
 	}}.
 

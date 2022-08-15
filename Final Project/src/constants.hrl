@@ -8,8 +8,8 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
--define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).
--define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).
+-define(PRINT(Text, Arg), ok).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).
+-define(PRINT(Text), ok).%io:format(atom_to_list(Text) ++ "~n")).
 -define(PRINT(), io:format("~n")).
 
 
