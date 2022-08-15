@@ -38,8 +38,7 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 				loop(NN_Data);
 
 		{get_weights, From} ->
-				Ordering = fun({Edge1, _Val}, {Edge2, _Val}) -> element(1, Edge1) =< element(1, Edge2) end,
-				?PRINT('lists:keysort(1, maps:to_list(WeightsMap))', lists:sort(Ordering, maps:to_list(WeightsMap))),
+				?PRINT('lists:keysort(1, maps:to_list(WeightsMap))', lists:sort(ordering, maps:to_list(WeightsMap))),
 				From ! {weights_list, lists:sort(Ordering, maps:to_list(WeightsMap))},  % send the bird its "brain" (weights) as a list
 				loop(NN_Data)
 	end.
@@ -155,8 +154,7 @@ feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList, Amount) -
 
 %% returns a new (updated) WeightsMap
 set_weights(NewWeightsList, WeightsMap) ->
-	
-	set_weights(NewWeightsList, lists:sort(Ordering, maps:to_list(WeightsMap)), #{}).
+	set_weights(NewWeightsList, lists:sort(ordering, maps:to_list(WeightsMap)), #{}).
 
 set_weights([], [], NewWeightsMap) -> NewWeightsMap;
 set_weights([NewWeight|NewWeightsListT], [{{Idx, weight, L_PID, R_PID}, _OldWeight}|WeightsListT], NewWeightsMap) ->
@@ -164,4 +162,7 @@ set_weights([NewWeight|NewWeightsListT], [{{Idx, weight, L_PID, R_PID}, _OldWeig
 set_weights([NewWeight|NewWeightsListT], [{{Idx, bias, PID}, _OldWeight}|WeightsListT], NewWeightsMap) ->
 	set_weights(NewWeightsListT, WeightsListT, NewWeightsMap#{ {Idx, bias, PID} => NewWeight }).
 
-ordering()
+
+ordering({Edge1, _Val}, {Edge2, _Val}) ->
+	element(1, Edge1) =< element(1, Edge2).
+
