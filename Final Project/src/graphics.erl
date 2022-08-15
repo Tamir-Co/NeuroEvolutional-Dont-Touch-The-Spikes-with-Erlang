@@ -108,23 +108,18 @@ init(_Args) ->
 		curr_state = idle,
 		spikesList = init_spike_list(),
 		pcList = [BirdServerPID],
-		pcsInSimulation = 1     % TODO change to define - the length of PCs list
+		waitForPCsAmount = 1     % TODO change to define - the length of PCs list
 	}}.
 
 %% =================================================================
-handle_cast({finish_init_birds, _PC_PID, CurrState}, State=#graphics_state{pcList = PC_List})->
-	case CurrState of
-%%		play_user -> gen_server:cast(hd(PC_List), {start_simulation});		% we can now goto start simulation
-		play_NEAT ->
-			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation
-			gen_server:cast(hd(PC_List), {simulate_frame})
-	end,
-	{noreply, State#graphics_state{curr_state=CurrState}};	% only after all birds had initialized, the graphics_state changes its state.
-%%
-%%handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{birdList=BirdList})->
-%%	NewBird = #bird{x=X, y=Y, direction=Direction},
-%%	NewState = State#graphics_state{birdList=BirdList ++ [NewBird]},
-%%	{noreply, NewState};
+handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcList = PC_List, waitForPCsAmount=WaitForPCsAmount})->
+	case WaitForPCsAmount of
+		1 ->
+			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation}};	% only after all birds had initialized, the graphics_state changes its state.
+		_Else ->
+			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
+	end;
 
 handle_cast(M={bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
 	io:format("M=: ~p~n", [M]),
@@ -132,37 +127,47 @@ handle_cast(M={bird_location, X, Y, Direction}, State=#graphics_state{curr_state
 	case CurrState of
 		play_user ->
 			NewState = State#graphics_state{birdUser=NewBird};
-		play_NEAT ->
+		play_NEAT_simulation ->
 			NewState = State#graphics_state{birdList=BirdList ++ [NewBird]}
 	end,
 	{noreply, NewState};
 
 handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = CurrState})->
-	NewState = case CurrState of
-				   play_user -> sound_proc ! "lose_trim",
-					   			State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT}
-			   end,
+	NewState =
+		case CurrState of
+			play_user ->
+				sound_proc ! "lose_trim",
+				State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT}
+		end,
 	{noreply, NewState};
 
 %% CandBirds = [{FrameCount, WeightsList}, {FrameCount, WeightsList}]
-handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_state=CurrState, pcList=PC_List, pcsInSimulation=PCsInSimulation, bestCandBirds=BestCandBirds})->
-	?PRINT(pc_finished_simulation, ''),
-	NewState = case CurrState of
-				   play_NEAT ->
-					   case PCsInSimulation of     % how many PCs are running (birds) simulation now
-									1 ->
-										?PRINT('case PCsInSimulation of, BestCandBirds:', BestCandBirds),
-										?PRINT('case PCsInSimulation of, CandBirds:', CandBirds),
-										FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
-										send_best_birds(FinalBestCandBirds, PC_List),
-										State#graphics_state{pcsInSimulation=0, bestCandBirds=[]};  % TODO init pcsInSimulation somewhere
-								
-									_Else ->
-										NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
-										State#graphics_state{pcsInSimulation=PCsInSimulation-1, bestCandBirds=NewBestCandBirds}
-				                end
-			   end,
-	{noreply, NewState}.
+handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
+	?PRINT(pc_finished_simulation),
+	NewState =
+		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
+			1 ->
+				?PRINT('case PCsInSimulation of, BestCandBirds:', BestCandBirds),
+				?PRINT('case PCsInSimulation of, CandBirds:', CandBirds),
+				FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
+				send_best_birds(FinalBestCandBirds, PC_List),
+				
+				State#graphics_state{curr_state=play_NEAT_population, waitForPCsAmount=length(PC_List), bestCandBirds=[]};
+			
+			_Else ->
+				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
+				State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1, bestCandBirds=NewBestCandBirds}
+		end,
+	{noreply, NewState};
+
+handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount})->
+	case WaitForPCsAmount of
+		1 ->
+			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation}};	% only after all birds had initialized, the graphics_state changes its state.
+		_Else ->
+			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
+	end.
 
 %% =================================================================
 %% We reach here each button press
@@ -184,18 +189,18 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 			State#graphics_state{score=0};
 		
 		?ButtonJumpID ->
-			case CurrState of
-				play_user ->
+%%			case CurrState of
+%%				play_user ->
 					sound_proc ! "jump_trim",
 				    gen_statem:cast(BirdUserPID, {jump}),
-				    State;
+				    State%;
 				
-				play_NEAT ->
-					State;
-				
-				idle ->
-					State
-			end
+%%				play_NEAT ->
+%%					State;
+%%
+%%				idle ->
+%%					State
+%%			end
 	end,
 	{noreply, NewState};
 
@@ -216,7 +221,7 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% =================================================================
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame, pcList=PC_List, birdList=BirdList, birdUserPID=BirdUserPID,
-										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, pcsInSimulation=PCsInSimulation}) ->  % refresh screen for graphics
+										 bird_x=Bird_x, bird_direction=Bird_dir, spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, waitForPCsAmount=WaitForPCsAmount}) ->  % refresh screen for graphics
 	wxWindow:refresh(Frame), % refresh screen
 	NewState = case CurrState of
 		idle ->
@@ -240,37 +245,29 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				end,
 				State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 				
-		play_NEAT ->
+		play_NEAT_simulation ->
 				todo,      % TODO hd(PC_List) all code!!
-				case PCsInSimulation of     % how many PCs are running (birds) simulation now
-					0 ->
-						?PRINT('PCsInSimulation_are_0', " "),
-						todo,
-						State;
-					
-					_Else ->
-						case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location
+				case length(BirdList) >= ?NUM_OF_BIRDS of   % all birds sent their location. TODO bad with PC down
+					true  ->
+%%						?PRINT('length(BirdList)', length(BirdList)),
+						gen_server:cast(hd(PC_List), {simulate_frame}),
+						{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+						case Has_changed_dir of
 							true  ->
-%%								?PRINT('length(BirdList)', length(BirdList)),
-								gen_server:cast(hd(PC_List), {simulate_frame}),
-								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-								case Has_changed_dir of
-									true  ->
-										NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-										gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-										NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
-										NewScore = Score + 1;
-									
-									false ->
-										NewSpikesList = SpikesList,
-										NewSpikesAmount = SpikesAmount,
-										NewScore = Score
-								end,
-								State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+								NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
+								gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
+								NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+								NewScore = Score + 1;
 							
-							false ->                % TODO delete?
-								State
-						end
+							false ->
+								NewSpikesList = SpikesList,
+								NewSpikesAmount = SpikesAmount,
+								NewScore = Score
+						end,
+						State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+											% TODO delete?
+					false ->
+						State
 				end
 			end,
 
@@ -300,11 +297,16 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 		play_user ->
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
-		play_NEAT ->
-			case length(BirdList) >= ?NUM_OF_BIRDS/2 of
-				true  -> draw_birds(DC, BitmapBird, BirdList);
-				false -> ok
-			end
+		play_NEAT_simulation ->
+%%			case length(BirdList) >= ?NUM_OF_BIRDS/2 of
+%%				true  ->
+					draw_birds(DC, BitmapBird, BirdList);
+%%				false ->
+%%					ok
+%%			end;
+		
+		play_NEAT_population ->
+			wxDC:drawBitmap(DC, BitmapBird, {X, Y})
 	end,
 	
 	wxStaticText:setLabel(TxtScore, "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),

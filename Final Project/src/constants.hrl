@@ -97,7 +97,7 @@
 	spikesList,
 	spikesAmount = ?INIT_SPIKES_WALL_AMOUNT,
 	pcList,
-	pcsInSimulation
+	waitForPCsAmount
 }).
 %graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 
