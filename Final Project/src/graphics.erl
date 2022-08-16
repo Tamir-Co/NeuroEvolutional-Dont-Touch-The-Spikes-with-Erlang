@@ -57,7 +57,7 @@ init(_Args) ->
 	wxSizer:setSizeHints(MainSizer, Frame),
 	
 	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0", [{style, ?wxALIGN_CENTRE}]),	%{size, {100, 100}}, 
-	FontScore = wxFont:new(16, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
+	FontScore = wxFont:new(13, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
 	wxStaticText:setFont(TxtScore, FontScore),
 	
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
@@ -151,7 +151,7 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 		end,
 	{noreply, NewState};
 
-handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount, score=Score, bestScore=BestScore})->
+handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount, genNum=GenNum, score=Score, bestScore=BestScore})->
 	case WaitForPCsAmount of
 		1 ->
 			?PRINT('pc_finished_population'),
@@ -159,7 +159,7 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 			cast_all_PCs(PC_List, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs(PC_List, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end.
@@ -274,8 +274,10 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
 %% =================================================================
-handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
-													birdUser=#bird{y=Y}, bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
+handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush,
+													bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, birdUser=#bird{y=Y},
+													bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore,
+													textScore=TxtScore, genNum=GenNum}) ->
 	
 	DC = wxPaintDC:new(Panel),
 	BitmapBird = case Direction of
@@ -283,21 +285,24 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 		l -> BitmapBird_L
 	end,
 	
+	ScoreLabel = "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore),
 	case CurrState of
 		idle ->
+			wxStaticText:setLabel(TxtScore, ScoreLabel),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_user ->
+			wxStaticText:setLabel(TxtScore, ScoreLabel),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_NEAT_simulation ->
+			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
 			draw_birds(DC, BitmapBird, BirdList);
 		
 		play_NEAT_population ->
+			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y})
 	end,
-	
-	wxStaticText:setLabel(TxtScore, "Score: " ++ integer_to_list(Score) ++ "\nBest score: " ++ integer_to_list(BestScore)),
 	
 	wxDC:setPen(DC, ?wxTRANSPARENT_PEN),
 	wxDC:setBrush(DC, Brush),

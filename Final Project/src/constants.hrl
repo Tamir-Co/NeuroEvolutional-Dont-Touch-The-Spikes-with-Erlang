@@ -22,7 +22,7 @@
 
 %% Spikes:
 -define(INIT_SPIKE_LIST, [0 || _ <- lists:seq(1, ?MAX_SPIKES_AMOUNT)]).
--define(SPIKE_VALUE, 1).
+-define(SPIKE_VALUE, 10).
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
 -define(ADD_SPIKES_WALL_TOUCH, 1).
@@ -104,10 +104,11 @@
 	score = 0,
 	bestScore = 0,
 	curr_state = idle,
-	spikesList,
+	spikesList = ?INIT_SPIKE_LIST,
 	spikesAmount = ?INIT_SPIKES_WALL_AMOUNT,
-	pcList,
-	waitForPCsAmount
+	pcList = [],
+	waitForPCsAmount,
+	genNum = 1
 }).
 
 -record(pc_bird_server_state, {
