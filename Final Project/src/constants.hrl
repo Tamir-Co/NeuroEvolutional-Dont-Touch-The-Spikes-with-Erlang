@@ -30,7 +30,7 @@
 -define(SPIKE_HEIGHT, 25).
 -define(SPIKE_HEIGHT_4, 6).
 -define(SPIKE_HALF_WIDTH, 18).
--define(SPIKE_GAP_Y, 13).
+-define(SPIKE_GAP_Y, 14).
 -define(SPIKES_TOP_Y, 100).
 
 -define(TOP_BOTTOM_SPIKES_AMOUNT, 8).
@@ -38,7 +38,7 @@
 -define(SPIKE_GAP_X, 9).
 -define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120). % TODO need this?
 -define(TOP_RECT_HEIGHT, 70).
--define(BOTTOM_RECT_Y, 610). %?BG_HEIGHT-120
+-define(BOTTOM_RECT_Y, 630). %?BG_HEIGHT-120
 -define(BOTTOM_RECT_HEIGHT, 90).
 
 
