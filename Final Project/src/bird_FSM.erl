@@ -40,6 +40,8 @@ callback_mode() ->
 %% =================================================================
 % idle(enter, _OldState, Bird=#bird{}) ->
 % {keep_state, #bird{}}.
+idle(cast, {spikes_list, _SpikesList}, Bird) ->
+	{keep_state, Bird};
 %%idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
 %%	{keep_state, Bird};
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
@@ -49,13 +51,13 @@ idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replac
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
 		idle ->
-			{next_state, simulation, Bird#bird{graphicState=play_user}};    % graphics init this bird from the beginning
+			{next_state, simulation, Bird#bird{graphicState=play_user, spikesList=?INIT_SPIKE_LIST}};    % graphics init this bird from the beginning
 			
 %%		play_user ->
 %%			undefined;
 		
 		play_NEAT ->
-			{next_state, simulation, Bird#bird{frameCount=0}}
+			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST}}
 	end.
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->

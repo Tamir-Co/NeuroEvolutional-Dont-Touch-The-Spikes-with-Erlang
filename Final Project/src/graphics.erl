@@ -108,7 +108,7 @@ init(_Args) ->
 		birdUserPID = BirdUserPID,
 		birdList = [],
 		curr_state = idle,
-		spikesList = init_spike_list(),
+		spikesList = ?INIT_SPIKE_LIST,
 		pcList = [BirdServerPID],     % TODO
 		waitForPCsAmount = 1     % TODO change to define - the length of PCs list
 	}}.
@@ -154,7 +154,7 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 				FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
 				send_best_birds(FinalBestCandBirds, PC_List),
 				
-				State#graphics_state{curr_state=play_NEAT_population, waitForPCsAmount=length(PC_List), bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=init_spike_list()};
+				State#graphics_state{curr_state=play_NEAT_population, waitForPCsAmount=length(PC_List), bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
 			_Else ->
 				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
@@ -162,13 +162,13 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 		end,
 	{noreply, NewState};
 
-handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount})->
+handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount, score=Score, bestScore=BestScore})->
 	case WaitForPCsAmount of
 		1 ->
 			?PRINT('pc_finished_population'),
 			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
 			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end.
@@ -233,7 +233,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				wxSizer:hide(UiSizer, JumpSizer, []),
 				wxSizer:show(UiSizer, StartSizer, []),
 				wxSizer:layout(MainSizer),
-				State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=init_spike_list()};	%, score=0
+				State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=?INIT_SPIKE_LIST};	%, score=0
 		
 		play_user ->
 				gen_statem:cast(BirdUserPID, {simulate_frame}),
@@ -343,11 +343,9 @@ simulate_x_movement(X, Direction) ->
 	end.
 
 
-init_spike_list() -> lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)).
-
 %% Wrap function. Creates a random spikes list with exactly TotalSpikes spikes
 create_spikes_list(TotalSpikes) ->
-	create_spikes_list(init_spike_list(), 0, TotalSpikes).
+	create_spikes_list(?INIT_SPIKE_LIST, 0, TotalSpikes).
 
 
 %% Creates a random spikes list with exactly TotalSpikes spikes
@@ -430,7 +428,7 @@ send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
 
 %% =================================================================
 init_system() ->
-	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), init_spike_list(), idle),    % the graphics owns the user bird
+	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), ?INIT_SPIKE_LIST, idle),    % the graphics owns the user bird
 	
 	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
 	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, trunc(?NUM_OF_BIRDS / 1)),	% init pc bird server. TODO divide by the amount of PCs

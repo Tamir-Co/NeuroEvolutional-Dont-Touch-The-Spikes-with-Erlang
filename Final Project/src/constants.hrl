@@ -10,7 +10,7 @@
 
 -define(PRINT(Text, Arg), ok).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%
 -define(PRINT(Text),  ok).%io:format(atom_to_list(Text) ++ "~n")).%
--define(PRINT(), io:format("~n")).
+-define(PRINT(), ok).%io:format("~n")).%
 
 
 %% Frame structure:
@@ -20,6 +20,7 @@
 
 
 %% Spikes:
+-define(INIT_SPIKE_LIST, [0 || _ <- lists:seq(1, ?MAX_SPIKES_AMOUNT)]).
 -define(SPIKE_VALUE, 1).
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
@@ -51,7 +52,7 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 100).    % TODO 1000 or other number, and move to graphics
+-define(NUM_OF_BIRDS, 200).    % TODO 1000 or other number, and move to graphics
 -define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
 
@@ -123,7 +124,7 @@
 	velocityY = 0,
 	direction = r,
 	pcPID,
-	spikesList = lists:map(fun(_) -> 0 end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
+	spikesList = ?INIT_SPIKE_LIST,
 	nnPID,
 	graphicState = idle,
 	frameCount = 0
