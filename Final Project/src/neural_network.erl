@@ -142,8 +142,7 @@ receive_NN_output(OutputNeuronPID) ->
 %%				io:format("IsJump: ~p~n", [IsJump]),
 				IsJump > 0;
 		
-		_Else ->    % delete other decide jump messages   % TODO delete?
-				%io:format("Else NN output: ~p~n", [Else]),
+		_Else ->    % delete other decide jump messages
 				receive_NN_output(OutputNeuronPID)
 	end.
 

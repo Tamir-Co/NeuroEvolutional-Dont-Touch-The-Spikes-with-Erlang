@@ -36,10 +36,10 @@
 -define(TOP_BOTTOM_SPIKES_AMOUNT, 8).
 -define(SPIKES_LEFT_X, 20).
 -define(SPIKE_GAP_X, 9).
--define(SPIKES_BOTTOM_Y, ?BG_HEIGHT-120). % TODO need this?
+-define(SPIKES_BOTTOM_Y, (?BOTTOM_RECT_Y-?SPIKE_HEIGHT)). % TODO need this?
 -define(TOP_RECT_HEIGHT, 70).
 -define(BOTTOM_RECT_Y, 630). %?BG_HEIGHT-120
--define(BOTTOM_RECT_HEIGHT, 90).
+-define(BOTTOM_RECT_HEIGHT, 70).
 
 
 %% Bird:
@@ -91,7 +91,6 @@
 	uiSizer,
 	startSizer,
 	jumpSizer,
-	bitmapBG,
 	bitmapBird_R,
 	bitmapBird_L,
 	birdUser,

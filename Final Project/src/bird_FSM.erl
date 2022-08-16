@@ -37,15 +37,6 @@ callback_mode() ->
 	state_functions.
 
 %% =================================================================
-% idle(enter, _OldState, Bird=#bird{}) ->
-% {keep_state, #bird{}}.
-idle(cast, {spikes_list, _SpikesList}, Bird) ->
-	{keep_state, Bird};
-%%idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
-%%	{keep_state, Bird};
-idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
-	NN_PID ! {set_weights, NewBrain},
-	{keep_state, Bird};
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
 		idle ->
@@ -53,7 +44,16 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 		
 		play_NEAT ->
 			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST}}
-	end.
+	end;
+idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
+	NN_PID ! {set_weights, NewBrain},
+	{keep_state, Bird};
+idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore
+	{keep_state, Bird};
+idle(cast, {jump}, Bird) -> % ignore
+	{keep_state, Bird}.
+%%idle(cast, {simulate_frame}, Bird) ->
+%%	{keep_state, Bird};
 
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
@@ -111,9 +111,9 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 	end,
 
 	%% check if the bird touching top/bottom spikes, or bird touching wall spikes (only when heading to the wall and near it)
-	IsDead = Y >= ?SPIKES_BOTTOM_Y orelse Y =< ?SPIKES_TOP_Y orelse is_bird_touch_wall_spike(Bird, SpikesList, NewDirection),
+	IsDead = (Y >= ?SPIKES_BOTTOM_Y-?BIRD_HEIGHT) orelse (Y =< ?SPIKES_TOP_Y) orelse is_bird_touch_wall_spike(Bird, SpikesList, NewDirection),
 	
-	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY*?TIME_UNIT, velocityY=VelocityY+?GRAVITY*?TIME_UNIT, direction=NewDirection}}.   % TODO check mult (*)
+	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY, velocityY=VelocityY+?GRAVITY, direction=NewDirection}}.
 
 
 run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=SpikesList}) ->

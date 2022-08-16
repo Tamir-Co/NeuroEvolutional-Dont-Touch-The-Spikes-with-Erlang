@@ -56,24 +56,14 @@ init(_Args) ->
 	wxPanel:setSizer(Frame, MainSizer),
 	wxSizer:setSizeHints(MainSizer, Frame),
 	
-	%TxtSizer = wxBoxSizer:new(?wxVERTICAL),
 	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0", [{style, ?wxALIGN_CENTRE}]),	%{size, {100, 100}}, 
 	FontScore = wxFont:new(16, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
 	wxStaticText:setFont(TxtScore, FontScore),
-	%wxStaticText:setBackgroundColour(TxtScore, {200,200,200}),
-	%wxSizer:add(TxtSizer, TxtScore, [{flag, ?wxALIGN_CENTRE}, {border, 5}]),	%{flag, ?wxLEFT bor ?wxTOP bor ?wxRIGHT bor ?wxEXPAND}
-	%wxPanel:setSizer(Panel, TxtSizer),
-	%wxSizer:setSizeHints(TxtSizer, Panel),
-	
-	ImageBG = wxImage:new("images/background.png", []),
-	BitmapBG = wxBitmap:new(wxImage:scale(ImageBG, ?BG_WIDTH, ?BG_HEIGHT, [{quality, ?wxIMAGE_QUALITY_HIGH}])),
-%%	StaticBitmapBG = wxStaticBitmap:new(Panel, 1, BitmapBG),
 	
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
-	ImageBird_L = wxImage:mirror(ImageBird_R),	% ImageBird_L = wxImage:new("images/bird_LEFT.png", []),
+	ImageBird_L = wxImage:mirror(ImageBird_R),
 	BitmapBird_R = wxBitmap:new(wxImage:scale(ImageBird_R, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
-%%	StaticBitmapBird = wxStaticBitmap:new(Panel, 1, BitmapBird),
 
 	wxFrame:show(Frame),
 	erlang:send_after(?TIMER, self(), timer),
@@ -101,7 +91,6 @@ init(_Args) ->
 		uiSizer = UiSizer,
 		startSizer = StartSizer,
 		jumpSizer = JumpSizer,
-		bitmapBG = BitmapBG,
 		bitmapBird_R = BitmapBird_R,
 		bitmapBird_L = BitmapBird_L,
 		birdUser = #bird{},
@@ -275,11 +264,10 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
 %% =================================================================
-handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
+handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
 													birdUser=#bird{y=Y}, bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
 	
 	DC = wxPaintDC:new(Panel),
-	%wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
 	BitmapBird = case Direction of
 		r -> BitmapBird_R;
 		l -> BitmapBird_L
