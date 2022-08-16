@@ -20,19 +20,23 @@ init(NetworkStructure) ->
 	configure_NN(WeightsMap, N_PIDsList, 1),
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList}).
 
-loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsList=N_PIDsList}) ->
+loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsList=N_PIDsList, spikesList=SpikesList}) ->
 	receive
-		{set_weights, NewWeightsList} ->
-				NewWeightsMap = set_weights(NewWeightsList, WeightsMap),
-				configure_NN(NewWeightsMap, N_PIDsList, 1),
-				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
-
-		{decide_jump, From, BirdHeight, BirdWallDistance, SpikesList} ->    % TODO send fewer SpikesList
+		{decide_jump, From, BirdHeight, BirdWallDistance} ->    % TODO send fewer SpikesList
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
 					true  -> gen_statem:cast(From, {jump}); % bird jump
 					false -> void                           % bird doesn't jump
 				end,
 				loop(NN_Data);
+		
+		{spikes_list, NewSpikesList}  ->
+				loop(NN_Data#nn_data{spikesList=NewSpikesList});
+		
+		{set_weights, NewWeightsList} ->
+				NewWeightsMap = set_weights(NewWeightsList, WeightsMap),
+				configure_NN(NewWeightsMap, N_PIDsList, 1),
+				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
+
 
 		{get_weights, From} ->
 				SortedWeightsByIdx = lists:sort(fun(Edge1, Edge2) -> ordering(Edge1, Edge2) end, maps:to_list(WeightsMap)),

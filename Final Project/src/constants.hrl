@@ -25,8 +25,8 @@
 -define(SPIKE_VALUE, 1).
 -define(MAX_SPIKES_AMOUNT, 10).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
--define(ADD_SPIKES_WALL_TOUCH, 0.5).
--define(INIT_SPIKES_WALL_AMOUNT, 0.5).
+-define(ADD_SPIKES_WALL_TOUCH, 1).
+-define(INIT_SPIKES_WALL_AMOUNT, 1).
 -define(SPIKE_WIDTH, 36).
 -define(SPIKE_HEIGHT, 25).
 -define(SPIKE_HEIGHT_4, 6).
@@ -53,7 +53,7 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 1000).    % TODO 1000 or other number, and move to graphics
+-define(NUM_OF_BIRDS, 200).    % TODO 1000 or other number, and move to graphics
 -define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
 
@@ -135,7 +135,8 @@
 	networkStructure,   % [L1, L2, ...]
 	n_PIDsLayersMap,
 	weightsMap,
-	n_PIDsList
+	n_PIDsList,
+	spikesList = ?INIT_SPIKE_LIST
 }).
 
 -record(neuron_data, {

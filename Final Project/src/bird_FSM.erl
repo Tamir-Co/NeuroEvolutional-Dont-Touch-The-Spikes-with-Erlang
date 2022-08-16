@@ -56,9 +56,13 @@ idle(cast, {jump}, Bird) -> % ignore
 %%	{keep_state, Bird};
 
 
-simulation(cast, {spikes_list, SpikesList}, Bird) ->
+simulation(cast, {spikes_list, SpikesList}, Bird=#bird{nnPID=NN_PID, graphicState=GraphicState}) ->
+	case GraphicState of
+		play_user -> ok;
+		play_NEAT -> NN_PID ! {spikes_list, SpikesList}   % send spike list to NN
+	end,
 	{keep_state, Bird#bird{spikesList = SpikesList}};
-simulation(cast, {jump}, Bird=#bird{}) ->
+simulation(cast, {jump}, Bird) ->
 	NextBird = jump(Bird),
 	{keep_state, NextBird};
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->	% play_user
@@ -116,10 +120,10 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY, velocityY=VelocityY+?GRAVITY, direction=NewDirection}}.
 
 
-run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=SpikesList}) ->
+run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID}) ->
 	case Direction of
-		r -> NN_PID ! {decide_jump, self(), Y, ?BG_WIDTH-X, SpikesList};
-		l -> NN_PID ! {decide_jump, self(), Y, X, SpikesList}
+		r -> NN_PID ! {decide_jump, self(), Y, ?BG_WIDTH-X};
+		l -> NN_PID ! {decide_jump, self(), Y, X}
 	end.
 
 
