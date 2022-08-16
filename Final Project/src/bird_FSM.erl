@@ -46,14 +46,16 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST}}
 	end;
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
+%%	wx_object:cast(graphics, {brain, NewBrain}),
 	NN_PID ! {set_weights, NewBrain},
+%%	io:format("~ncast brain to graphics"),
 	{keep_state, Bird};
 idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore
 	{keep_state, Bird};
 idle(cast, {jump}, Bird) -> % ignore
+	{keep_state, Bird};
+idle(cast, {simulate_frame}, Bird) -> % ignore
 	{keep_state, Bird}.
-%%idle(cast, {simulate_frame}, Bird) ->
-%%	{keep_state, Bird};
 
 
 simulation(cast, {spikes_list, SpikesList}, Bird=#bird{nnPID=NN_PID, graphicState=GraphicState}) ->
@@ -89,7 +91,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			receive
 				{weights_list, WeightsList} ->
 						case FrameCount > 280 of
-							true  -> io:format("WeightsList ~p~n", [WeightsList]);
+							true  -> i;%o:format("WeightsList ~p~n", [WeightsList]);
 							false -> ok
 						end,
 						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC

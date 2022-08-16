@@ -8,12 +8,21 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
--define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%ok).%
--define(PRINT(Text),  io:format(atom_to_list(Text) ++ "~n")).%ok).%
--define(PRINT(), io:format("~n")).%ok).%
-
 
 -define(INIT_PC_AMOUNT, 4).
+
+-define(GRAPHICS_NODE, 'pc0@Nadav-VirtualBox').
+-define(PC1, 'pc1@Nadav-VirtualBox').
+-define(PC2, 'pc2@Nadav-VirtualBox').
+-define(PC3, 'pc3@Nadav-VirtualBox').
+-define(PC4, 'pc4@Nadav-VirtualBox').
+-define(PC_NAMES, [?PC1, ?PC2, ?PC3, ?PC4]).
+
+
+-define(PRINT(Text, Arg), k).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%o
+-define(PRINT(Text), ok).% io:format(atom_to_list(Text) ++ "~n")).%
+-define(PRINT(),ok).% io:format("~n")).%
+
 
 %% Frame structure:
 -define(BG_WIDTH, 400).
@@ -53,8 +62,8 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 200).    % TODO 1000 or other number, and move to graphics
--define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
+-define(NUM_OF_BIRDS, 1000).    % TODO 1000 or other number, and move to graphics
+-define(PERCENT_SURVIVED_BIRDS, 0.2).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation, per PC and generation
 
 
@@ -77,7 +86,7 @@
 
 
 %% Time:
--define(TIMER, 60).		% Graphics update timer
+-define(TIMER, 70).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
 
@@ -96,7 +105,8 @@
 	bitmapBird_L,
 	birdUser,
 	birdUserPID,
-	birdList = [],
+	birdList = sets:new(),
+	locatedBirdsAmount = 0,
 	numOfAliveBirds = 0,
 	bird_x = ?BIRD_START_X,
 	bird_direction = r,
@@ -108,7 +118,9 @@
 	spikesAmount = ?INIT_SPIKES_WALL_AMOUNT,
 	pcList = [],
 	waitForPCsAmount,
-	genNum = 1
+	genNum = 1,
+	bestPreviousBrain,
+	brainList = []
 }).
 
 -record(pc_bird_server_state, {

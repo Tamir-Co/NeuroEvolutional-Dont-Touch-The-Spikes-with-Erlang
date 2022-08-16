@@ -68,6 +68,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	case NumOfAliveBirds of
 		1 ->
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
+%%			io:format("NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS:   ~p\n", [NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS]),
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
 			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds});
 		
@@ -103,9 +104,10 @@ msg_to_birds([Bird|Bird_T], Msg, IsMsg) ->
 %% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
 create_mutations_and_send([], []) -> finish;
 create_mutations_and_send(BirdsListPID, [Brain|BrainT]) ->
+%%	io:format("trunc(1/?PERCENT_SURVIVED_BIRDS)-1 :   ~p\n", [trunc(1/?PERCENT_SURVIVED_BIRDS) - 1]),
 	RemainingPIDs = mutate_brain_and_send(BirdsListPID, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
 	case RemainingPIDs of
-		[] -> finish;
+		[] -> io:format("\nfinish\n"), finish;
 		[BirdPID|BirdsListPID_T] ->
 			BirdPID ! {replace_genes, Brain},     % keep each "brain" once
 			create_mutations_and_send(BirdsListPID_T, BrainT)  % mutate the remaining brains
