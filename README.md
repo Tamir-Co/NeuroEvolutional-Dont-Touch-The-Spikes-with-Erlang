@@ -28,15 +28,15 @@ there are multiple ways you can run the program:
 ### single console
 to run the code on a single console change the configuration in src/Constants.hrl to:
 ```erlang
--define(GRAPHICS_NODE, 'pc1@<enter pc1 hostname>').
--define(PC1, 'pc1@<enter pc1 hostname>').
--define(PC2, 'pc1@<enter pc1 hostname>').
--define(PC3, 'pc1@<enter pc1 hostname>').
--define(PC4, 'pc1@<enter pc1 hostname>').
+-define(GRAPHICS_NODE, 'pc0@<enter pc0 hostname>').
+-define(PC1, 'pc0@<enter pc0 hostname>').
+-define(PC2, 'pc0@<enter pc0 hostname>').
+-define(PC3, 'pc0@<enter pc0 hostname>').
+-define(PC4, 'pc0@<enter pc0 hostname>').
 ```
 then from a bash terminal run the following command:
 ```bash
-erl -sname 'pc1' -setcookie yummy
+erl -sname 'pc0' -setcookie yummy
 ```
 next move to the Run instructions.
 

@@ -11,11 +11,11 @@
 
 -define(INIT_PC_AMOUNT, 4).
 
--define(GRAPHICS_NODE, 'pc0@Nadav-VirtualBox').
--define(PC1, 'pc1@Nadav-VirtualBox').
--define(PC2, 'pc2@Nadav-VirtualBox').
--define(PC3, 'pc3@Nadav-VirtualBox').
--define(PC4, 'pc4@Nadav-VirtualBox').
+-define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
+-define(PC1,            'pc0@Nadav-VirtualBox').
+-define(PC2,            'pc0@Nadav-VirtualBox').
+-define(PC3,            'pc0@Nadav-VirtualBox').
+-define(PC4,            'pc0@Nadav-VirtualBox').
 -define(PC_NAMES, [?PC1, ?PC2, ?PC3, ?PC4]).
 
 

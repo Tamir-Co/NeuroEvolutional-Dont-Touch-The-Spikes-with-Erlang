@@ -16,7 +16,7 @@
 
 -export([start/0]).
 -export([init/1, handle_event/2, handle_sync_event/3, handle_info/2, handle_cast/2]).
--export([sound/0]).
+-export([sound/0, graphics_rpc/1]).
 
 -define(SERVER, ?MODULE).
 
@@ -106,9 +106,9 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcLi
 	case WaitForPCsAmount of
 		1 ->
 %%			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
-			cast_all_PCs(PC_List, {start_simulation}),
+			cast_all_PCs2(?PC_NAMES, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
-			cast_all_PCs(PC_List, {simulate_frame}),
+			cast_all_PCs2(?PC_NAMES, {simulate_frame}),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(PC_List), numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
 		
 		_Else ->
@@ -164,9 +164,9 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 		1 ->
 			?PRINT('pc_finished_population'),
 %%			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
-			cast_all_PCs(PC_List, {start_simulation}),
+			cast_all_PCs2(?PC_NAMES, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
-			cast_all_PCs(PC_List, {simulate_frame}),
+			cast_all_PCs2(?PC_NAMES, {simulate_frame}),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(PC_List), numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		
 		_Else ->
@@ -190,7 +190,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:layout(MainSizer),
 %%			gen_server:cast(hd(PC_List), {start_bird_FSM, play_NEAT, SpikesList}),
-			cast_all_PCs(PC_List, {start_bird_FSM, play_NEAT, SpikesList}),
+			cast_all_PCs2(?PC_NAMES, {start_bird_FSM, play_NEAT, SpikesList}),
 			State#graphics_state{score=0, bestScore=0};
 		
 		?ButtonJumpID ->
@@ -252,13 +252,13 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 					true  ->
 %%		        		?PRINT('length(BirdList)', length(BirdList)),
 %%						gen_server:cast(hd(PC_List), {simulate_frame}),
-						cast_all_PCs(PC_List, {simulate_frame}),
+						cast_all_PCs2(?PC_NAMES, {simulate_frame}),
 						{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 						case Has_changed_dir of
 							true  ->
 								NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
 %%								gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),
-								cast_all_PCs(PC_List, {spikes_list, NewSpikesList}),
+								cast_all_PCs2(?PC_NAMES, {spikes_list, NewSpikesList}),
 								NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
 								NewScore = Score + 1;
 							
@@ -438,10 +438,20 @@ init_PCs2([PC_Name|PC_NamesT]) ->
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
 
+cast_all_PCs2([], _Msg) -> finish;
+cast_all_PCs2([PC_Name|PC_NamesT], Msg) ->
+	rpc:cast(PC_Name, pc_bird_server, pc_rpc, [PC_Name, Msg]),
+	cast_all_PCs2(PC_NamesT, Msg).
+
+
 cast_all_PCs([], _Msg) -> finish;
 cast_all_PCs([PcPID|PcListT], Msg) ->
 	gen_server:cast(PcPID, Msg),
 	cast_all_PCs(PcListT, Msg).
+
+
+graphics_rpc(Msg)->
+	wx_object:cast(graphics, Msg).
 
 
 %% This function is done by the sound process

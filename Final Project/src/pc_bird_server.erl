@@ -14,6 +14,7 @@
 %% API
 -export([start/2]).
 -export([init/1, handle_call/3, handle_cast/2]).
+-export([pc_rpc/2]).
 
 %% =================================================================
 start(PC_Name, NumOfPcBirds) ->
@@ -42,7 +43,8 @@ handle_call(_Request, _From, _State) ->
 handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_state{pcName=PC_Name, birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
 	io:format("NumOfPcBirds ~p ~n", [NumOfPcBirds]),
 	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState),
-	wx_object:cast(graphics, {finish_init_birds, self(), GraphicState}),		% tell graphics the PC finished to all start_bird_FSMs
+%%	wx_object:cast(graphics, {finish_init_birds, self(), GraphicState}),		% tell graphics the PC finished to all start_bird_FSMs
+	rpc:cast(?GRAPHICS_NODE, graphics, graphics_rpc, [{finish_init_birds, self(), GraphicState}]),
 	{noreply, State#pc_bird_server_state{graphicState=GraphicState, birdsMap=NewBirdsMap}};
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
@@ -58,11 +60,13 @@ handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListO
 	{noreply, State};
 
 handle_cast({bird_location, Y}, State=#pc_bird_server_state{}) ->
-	wx_object:cast(graphics, {bird_location, Y}),
+%%	wx_object:cast(graphics, {bird_location, Y}),
+	rpc:cast(?GRAPHICS_NODE, graphics, graphics_rpc, [{bird_location, Y}]),
 	{noreply, State};
 
 handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
-	wx_object:cast(graphics, {neat_bird_disqualified}),
+%%	wx_object:cast(graphics, {neat_bird_disqualified}),
+	rpc:cast(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_disqualified}]),
 	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsList}},  % update birds map
 	NewListOfAliveBirds = ListOfAliveBirds -- [BirdPID],   % bird is dead, remove it from alive birds
 	case NumOfAliveBirds of
@@ -70,7 +74,8 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
 %%			io:format("NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS:   ~p\n", [NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS]),
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
-			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds});
+%%			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds}),
+			rpc:cast(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_simulation, self(), CandBirds}]);
 		
 		_Else ->
 			ok
@@ -79,8 +84,13 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
 	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
-	wx_object:cast(graphics, {pc_finished_population, self()}),
+%%	wx_object:cast(graphics, {pc_finished_population, self()})
+	rpc:cast(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_population, self()}]),
 	{noreply, State#pc_bird_server_state{}}.
+
+
+pc_rpc(Pc, Msg)->
+	gen_server:cast(Pc, Msg).
 
 %% =================================================================
 %% Start all bird FSMs and return the new bird list
