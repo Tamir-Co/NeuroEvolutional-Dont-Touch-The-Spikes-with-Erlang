@@ -28,15 +28,10 @@ test()->
 
 init() ->
 	loop(#neuron_data{}).
-%%	receive
-%%		{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs} ->
-%%				loop(#neuron_data{acc=0, weights=Weights, bias=Bias, activation=Activation, origInPIDs=InPIDs, remInPIDs=InPIDs, outPIDs=OutPIDs})
-%%	end.
 
 loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
 	receive
 		{configure_neuron, NewWeights, NewBias, NewActivation, NewInPIDs, NewOutPIDs} ->
-%%				?PRINT('{configure_neuron, Weights, Bias, Activation, InPIDs, OutPIDs}'),
 				loop(#neuron_data{acc=0, weights=NewWeights, bias=NewBias, activation=NewActivation, origInPIDs=NewInPIDs, remInPIDs=NewInPIDs, outPIDs=NewOutPIDs});
 		
 		{neuron, From, A} ->
@@ -51,7 +46,6 @@ loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 												origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
 					false -> MyA = activation_func(Activation, Z + Bias),
 							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
-%%							 ?PRINT('{neuron, self(), MyA}', {neuron, self(), MyA}),
 							 loop(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
 								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
 				end
@@ -59,6 +53,8 @@ loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 
 %% =================================================================
 activation_func(tanh, Z) -> math:tanh(Z);
+
+activation_func(identity, Z) -> Z;
 
 activation_func(relu, Z) -> case 0 < Z of
 								true  -> Z;

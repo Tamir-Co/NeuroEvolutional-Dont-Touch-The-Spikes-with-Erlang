@@ -43,7 +43,6 @@ handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_st
 	io:format("NumOfPcBirds ~p ~n", [NumOfPcBirds]),
 	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState),
 	wx_object:cast(graphics, {finish_init_birds, self(), GraphicState}),		% tell graphics the PC finished to all start_bird_FSMs
-	io:format("~n~n~nfinish_init_birds!~n~n~n"),
 	{noreply, State#pc_bird_server_state{graphicState=GraphicState, birdsMap=NewBirdsMap}};
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
@@ -55,13 +54,11 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{listOfAliveBi
 	{noreply, State};
 
 handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->  % TODO send only to alive birds
-%%	gen_statem:cast(hd(BirdList), {simulate_frame}),
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
 	{noreply, State};
 
 handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
 	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
-%%	?PRINT(bird_location_PC, " "),
 	{noreply, State};
 
 handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
@@ -73,7 +70,6 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 			?PRINT(),
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
-%%			?PRINT('lists:split(?NUM_OF_SURVIVED_BIRDS, SortedBirds)', CandBirds),
 			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds});
 		_Else ->
 			ok
@@ -81,7 +77,6 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	{noreply, State#pc_bird_server_state{listOfAliveBirds=NewListOfAliveBirds, birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
-%%	?PRINT('{populate_next_gen, BestBrains}', BestBrains),
 	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
 	wx_object:cast(graphics, {pc_finished_population, self()}),
 	{noreply, State#pc_bird_server_state{}}.
@@ -106,7 +101,6 @@ msg_to_birds([Bird|Bird_T], Msg, IsMsg) ->
 
 %% Receive Bird PID list and weights map list.
 %% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
-%create_mutations_and_send([], Sxfx) -> finish;
 create_mutations_and_send([], []) -> finish;
 create_mutations_and_send(BirdsListPID, [Brain|BrainT]) ->
 	RemainingPIDs = mutate_brain_and_send(BirdsListPID, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
@@ -123,7 +117,6 @@ mutate_brain_and_send([], _Brain, _NumOfMutations) -> [];
 mutate_brain_and_send([BirdPID|BirdsListPID_T], Brain, NumOfMutations) ->
 	{InputNeuronsWeights, NN_Weights} = lists:split(hd(?NN_STRUCTURE) * 2, Brain),
 	MutatedBrain = InputNeuronsWeights ++ mutate_brain(NN_Weights),
-%%	?PRINT('MutatedWeightsMap PC!!!!', MutatedWeightsList),
 	BirdPID ! {replace_genes, MutatedBrain},
 	mutate_brain_and_send(BirdsListPID_T, Brain, NumOfMutations-1).
 
@@ -141,14 +134,3 @@ mutate_brain(Brain) ->
 			end
 	    end,
 	lists:map(Fun, Brain).
-	
-%%mutate_brain(Brain) ->
-%%	?PRINT('FNJDONFDJOFN WeightsMap', Brain),
-%%	Fun = fun({bias, _}, W)		 -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR;
-%%			 ({weight, _, _}, W) -> W + (rand:uniform() - 0.5) / ?MUTATION_WEIGHT_FACTOR
-%%		  end,
-%%	maps:map(Fun, Brain).
-	% MutateBiasesWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_BIAS_FACTOR} || Key={bias, _NeuronPID} <- maps:keys(WeightsMap)]),
-	% MutateWeightsWeightsMap = maps:from_list([ {Key, maps:get(Key, WeightsMap) + ((rand:uniform())-0.5)/?MUTATION_WEIGHT_FACTOR} || Key={weight, _LeftNeuronPID, _RightNeuronPID} <- maps:keys(WeightsMap)]),
-	% maps:merge(MutateBiasesWeightsMap, MutateWeightsWeightsMap).
-	

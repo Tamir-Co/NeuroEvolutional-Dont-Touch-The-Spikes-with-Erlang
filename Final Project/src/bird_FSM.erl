@@ -23,7 +23,6 @@ start(Name, PC_PID, SpikesList, GraphicState) ->
 
 %% =================================================================
 init([PC_PID, SpikesList, GraphicState]) ->
-%%	io:format("init(bird) -> ~n"),
 	case GraphicState of
 		idle        -> NN_PID = undefined;
 		play_NEAT   -> NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end) % init NN
@@ -45,20 +44,17 @@ idle(cast, {spikes_list, _SpikesList}, Bird) ->
 %%idle(cast, {simulate_frame}, Bird) ->   % TODO delete?
 %%	{keep_state, Bird};
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
-%%	?PRINT('NewWeightsMap for bird', NewBrain),
 	NN_PID ! {set_weights, NewBrain},
 	{keep_state, Bird};
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
 		idle ->
 			{next_state, simulation, Bird#bird{graphicState=play_user, spikesList=?INIT_SPIKE_LIST}};    % graphics init this bird from the beginning
-			
-%%		play_user ->
-%%			undefined;
 		
 		play_NEAT ->
 			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST}}
 	end.
+
 
 simulation(cast, {spikes_list, SpikesList}, Bird) ->
 	{keep_state, Bird#bird{spikesList = SpikesList}};
@@ -81,24 +77,21 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
 											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
 	?PRINT(),
-%%	?PRINT(simulate_frame_play_NEAT),
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
-		true ->
+		true ->     % bird is dead
 			?PRINT(simulate_frame_play_NEAT_DEAD),
 			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
 				{weights_list, WeightsList} ->
-%%						?PRINT('WeightsList of the DEAD bird', WeightsList),
 						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC
 						{next_state, idle, #bird{graphicState=play_NEAT, pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;
 			
-		false ->
+		false ->     % bird is alive
 			run_NN(NextBird),
 			#bird{x=X, y=Y, direction=Direction} = NextBird,
 			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
-%%			?PRINT(simulate_frame_play_NEAT_NOT_DEAD),
 			{keep_state, NextBird#bird{frameCount = FrameCount + 1}}
 	end.
 

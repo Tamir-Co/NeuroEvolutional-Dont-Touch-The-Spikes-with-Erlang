@@ -66,12 +66,14 @@
 -define(MUTATION_MAX_RAND_VAL, 20).     % used to define the probability of a edge deletion (W=0)
 
 -define(ACTIVATION_FUNCTION, tanh).
--define(INPUT_ACTIVATION_FUNCTION, relu).
+-define(INPUT_ACTIVATION_FUNCTION, identity).
+
 
 %% UI IDs:
 -define(ButtonStartUserID, 10).
 -define(ButtonStartNEATID, 11).
 -define(ButtonJumpID, 12).
+
 
 %% Time:
 -define(TIMER, 60).		% Graphics update timer
@@ -79,7 +81,7 @@
 
 
 
-%% RECORDS %%
+%% Records:
 -record(graphics_state, {
 	frame,
 	panel,
@@ -107,7 +109,6 @@
 	pcList,
 	waitForPCsAmount
 }).
-%graphics_state has: main window, panel, background and bird images, bird record, and atom curr_state (idle, play_user, play_NEAT)
 
 -record(pc_bird_server_state, {
 	pcName,

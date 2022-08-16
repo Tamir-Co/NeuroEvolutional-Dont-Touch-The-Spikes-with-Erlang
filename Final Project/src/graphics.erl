@@ -125,7 +125,6 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcLi
 	end;
 
 handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
-%%	io:format("M=: ~p~n", [M]),
 	NewBird = #bird{x=X, y=Y, direction=Direction},
 	case CurrState of
 		play_user ->
@@ -143,14 +142,12 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_us
 	NewState = State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT},
 	{noreply, NewState};
 
-%% CandBirds = [{FrameCount, WeightsList}, {FrameCount, WeightsList}]
+%% CandBirds = [{FrameCount1, WeightsList1}, {FrameCount2, WeightsList2}]
 handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
 	?PRINT(pc_finished_simulation),
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
-%%				?PRINT('case PCsInSimulation of, BestCandBirds:', BestCandBirds),
-%%				?PRINT('case PCsInSimulation of, CandBirds:', CandBirds),
 				FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
 				send_best_birds(FinalBestCandBirds, PC_List),
 				
@@ -190,21 +187,12 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:layout(MainSizer),
 			gen_server:cast(hd(PC_List), {start_bird_FSM, play_NEAT, SpikesList}),
-			State#graphics_state{score=0};
+			State#graphics_state{score=0, bestScore=0};
 		
 		?ButtonJumpID ->
-%%			case CurrState of
-%%				play_user ->
-					sound_proc ! "jump_trim",
-				    gen_statem:cast(BirdUserPID, {jump}),
-				    State%;
-				
-%%				play_NEAT ->
-%%					State;
-%%
-%%				idle ->
-%%					State
-%%			end
+			sound_proc ! "jump_trim",
+			gen_statem:cast(BirdUserPID, {jump}),
+			State
 	end,
 	{noreply, NewState};
 
@@ -226,36 +214,39 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
 										 pcList=PC_List, birdList=BirdList, numOfAliveBirds=NumOfAliveBirds, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
-										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->  % refresh screen for graphics
+										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->
 	wxWindow:refresh(Frame), % refresh screen
-	NewState = case CurrState of
-		idle ->
+	NewState =
+		case CurrState of
+			idle ->
 				wxSizer:hide(UiSizer, JumpSizer, []),
 				wxSizer:show(UiSizer, StartSizer, []),
 				wxSizer:layout(MainSizer),
-				State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=?INIT_SPIKE_LIST};	%, score=0
+				State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=?INIT_SPIKE_LIST};
 		
-		play_user ->
+			play_user ->
 				gen_statem:cast(BirdUserPID, {simulate_frame}),
 				{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 				case Has_changed_dir of
-					true  -> sound_proc ! "bonus_trim",
-							 NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-							 gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),	%SpikesList,
-							 NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
-							 NewScore = Score + 1;
+					true  ->
+						sound_proc ! "bonus_trim",
+						NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
+						gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),
+						NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+						NewScore = Score + 1;
 					
-					false -> NewSpikesList = SpikesList,
-							 NewSpikesAmount = SpikesAmount,
-							 NewScore = Score
+					false ->
+						NewSpikesList = SpikesList,
+						NewSpikesAmount = SpikesAmount,
+						NewScore = Score
 				end,
 				State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 				
-		play_NEAT_simulation ->
+			play_NEAT_simulation ->
 				todo,      % TODO hd(PC_List) all code!!
 				case length(BirdList) >= NumOfAliveBirds of   % all birds sent their location. TODO bad with PC down
 					true  ->
-%%						?PRINT('length(BirdList)', length(BirdList)),
+%%		        		?PRINT('length(BirdList)', length(BirdList)),
 						gen_server:cast(hd(PC_List), {simulate_frame}),
 						{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 						case Has_changed_dir of
@@ -272,10 +263,10 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 						end,
 						State#graphics_state{birdList=[], bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 											% TODO delete?
-					false ->
+					false ->   % wait for some birds to send their location.
 						State
 				end
-			end,
+		end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
 	{noreply, NewState};
@@ -286,8 +277,6 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 %% =================================================================
 handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush, bitmapBG=_BitmapBG, bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L,
 													birdUser=#bird{y=Y}, bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore, textScore=TxtScore}) ->
-	
-%%	?PRINT('BirdList', BirdList),
 	
 	DC = wxPaintDC:new(Panel),
 	%wxDC:drawBitmap(DC, BitmapBG, {0, 0}),
@@ -304,12 +293,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_NEAT_simulation ->
-%%			case length(BirdList) >= ?NUM_OF_BIRDS/2 of
-%%				true  ->
-					draw_birds(DC, BitmapBird, BirdList);
-%%				false ->
-%%					ok
-%%			end;
+			draw_birds(DC, BitmapBird, BirdList);
 		
 		play_NEAT_population ->
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y})
@@ -357,21 +341,12 @@ create_spikes_list(SpikesList, SpikesCreated, TotalSpikes) ->
 
 %% Insert the spike to the list at the given index.
 %% Skip 1's at the inserting
-insert_spike(SpikesList, 1) -> [1|SpikesList--[0]];	% insert the spike
+insert_spike(SpikesList, 1) -> [1|SpikesList--[0]];         % insert the spike
 insert_spike([IsSpike|Spikes_T], SpikeIdx) ->
 	case IsSpike of
 		1 -> [IsSpike|insert_spike(Spikes_T, SpikeIdx)];	% skip
 		0 -> [IsSpike|insert_spike(Spikes_T, SpikeIdx-1)]	% don't skip
 	end.
-
-
-%%create_spikeList() ->
-%%	SpikeProb = 50,
-%%	% SpikesList = lists:filter(rand:uniform(100) < SpikeProb, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-%%	% SpikesList = [rand:uniform(100) < SpikeProb || _ <- lists:seq(1,?MAX_SPIKES_AMOUNT)],
-%%%%	SpikesList = [1,0,1,0,1,0,1,0,1,0],
-%%	SpikesList = lists:map(fun(_) -> case rand:uniform(100) < SpikeProb of true -> 1; false -> 0 end end, lists:seq(1,?MAX_SPIKES_AMOUNT)),
-%%	SpikesList.
 
 
 draw_birds(_, _, []) -> ok;
@@ -418,7 +393,6 @@ merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose
 
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
-%%send_best_birds([], []) -> ok;
 send_best_birds(BestCandBirds, [PC_PID]) -> gen_server:cast(PC_PID, {populate_next_gen, BestCandBirds});
 send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
 	?PRINT('send_best_birds(BestCandBirds', BestCandBirds),
@@ -438,10 +412,11 @@ init_system() ->
 % build a new & unique bird FSM
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
-%% os:cmd("aplay sounds/lose.wav")
+%% This function is done by the sound process
+%% Example of playing a sound from a file: os:cmd("aplay sounds/lose.wav")
 sound() ->
 	receive
-		SoundName -> SoundName%os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
+		SoundName -> os:cmd("aplay sounds/" ++ SoundName ++ ".wav")%SoundName%
 	end,
 	sound().
 
