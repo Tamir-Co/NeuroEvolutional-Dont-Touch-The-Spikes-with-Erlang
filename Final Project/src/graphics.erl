@@ -103,26 +103,25 @@ init(_Args) ->
 	}}.
 
 %% =================================================================
-handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcList = PC_List, waitForPCsAmount=WaitForPCsAmount})->
+handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcList=PC_List, waitForPCsAmount=WaitForPCsAmount})->
 	case WaitForPCsAmount of
 		1 ->
 %%			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
 			cast_all_PCs(PC_List, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs(PC_List, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(PC_List), numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
 		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
 
-handle_cast({bird_location, X, Y, Direction}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
-	NewBird = #bird{x=X, y=Y, direction=Direction},
+handle_cast({bird_location, Y}, State=#graphics_state{curr_state=CurrState, birdList=BirdList})->
 	case CurrState of
 		play_user ->
-			NewState = State#graphics_state{birdUser=NewBird};
+			NewState = State#graphics_state{birdUser=#bird{y=Y}};
 		play_NEAT_simulation ->
-			NewState = State#graphics_state{birdList=BirdList ++ [NewBird]}
+			NewState = State#graphics_state{birdList=BirdList ++ [Y]}
 	end,
 	{noreply, NewState};
 
@@ -140,9 +139,8 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
-				FinalBestCandBirds = merge_birds(BestCandBirds, CandBirds),
+				FinalBestCandBirds = element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds))),
 				send_best_birds(FinalBestCandBirds, PC_List),
-				
 				State#graphics_state{curr_state=play_NEAT_population, waitForPCsAmount=length(PC_List), bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
 			_Else ->
@@ -159,7 +157,8 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 			cast_all_PCs(PC_List, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs(PC_List, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(PC_List), numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end.
@@ -297,7 +296,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 		
 		play_NEAT_simulation ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
-			draw_birds(DC, BitmapBird, BirdList);
+			draw_birds(DC, BitmapBird, X, BirdList);
 		
 		play_NEAT_population ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
@@ -352,10 +351,10 @@ insert_spike([IsSpike|Spikes_T], SpikeIdx) ->
 	end.
 
 
-draw_birds(_, _, []) -> ok;
-draw_birds(DC, BitmapBird, [#bird{x=X,y=Y}|BirdList]) ->
+draw_birds(_, _, _, []) -> ok;
+draw_birds(DC, BitmapBird, X, [Y|BirdList]) ->
 	wxDC:drawBitmap(DC, BitmapBird, {X, Y}),
-	draw_birds(DC, BitmapBird, BirdList).
+	draw_birds(DC, BitmapBird, X, BirdList).
 
 
 draw_wall_spikes(_, [], _, _) -> ok;
@@ -381,9 +380,9 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 
 
 %% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
-merge_birds([], CandBirds) -> element(2, lists:unzip(CandBirds));
+merge_birds([], CandBirds) -> CandBirds;
 merge_birds(BestCandBirds, CandBirds) ->
-	element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS))).     % we only choose ceil(0.1*N) of all birds
+	merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS).     % we only choose ceil(0.1*N) of all birds
 
 merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
 merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->

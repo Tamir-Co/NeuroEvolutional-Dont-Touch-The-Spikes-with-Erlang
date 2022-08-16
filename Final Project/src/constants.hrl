@@ -13,7 +13,7 @@
 -define(PRINT(), ok).%io:format("~n")).%
 
 
--define(INIT_PC_AMOUNT, 1).
+-define(INIT_PC_AMOUNT, 2).
 
 %% Frame structure:
 -define(BG_WIDTH, 400).
@@ -54,7 +54,7 @@
 -define(BIRD_START_Y, 320).
 
 -define(NUM_OF_BIRDS, 200).    % TODO 1000 or other number, and move to graphics
--define(PERCENT_SURVIVED_BIRDS, 0.2).   % how many birds are survived after each generation (in %)
+-define(PERCENT_SURVIVED_BIRDS, 0.25).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
 
 
@@ -63,7 +63,7 @@
 
 -define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_FACTOR, 1).            % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_FACTOR, 5).            % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_MAX_RAND_VAL, 20).     % used to define the probability of a edge deletion (W=0)
 
 -define(ACTIVATION_FUNCTION, tanh).

@@ -74,8 +74,8 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			{next_state, idle, #bird{}};
 		
 		false ->
-			#bird{x=X, y=Y, direction=Direction} = NextBird,
-			wx_object:cast(graphics, {bird_location, X, Y, Direction}),
+			#bird{y=Y} = NextBird,
+			wx_object:cast(graphics, {bird_location, Y}),
 			{keep_state, NextBird}
 	end;
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
@@ -94,8 +94,8 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			
 		false ->     % bird is alive
 			run_NN(NextBird),
-			#bird{x=X, y=Y, direction=Direction} = NextBird,
-			gen_server:cast(PC_PID, {bird_location, X, Y, Direction}),
+			#bird{y=Y} = NextBird,
+			gen_server:cast(PC_PID, {bird_location, Y}),
 			{keep_state, NextBird#bird{frameCount = FrameCount + 1}}
 	end.
 

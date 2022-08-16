@@ -57,8 +57,8 @@ handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListO
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
 	{noreply, State};
 
-handle_cast({bird_location, X, Y, Direction}, State=#pc_bird_server_state{}) ->
-	wx_object:cast(graphics, {bird_location, X, Y, Direction}),
+handle_cast({bird_location, Y}, State=#pc_bird_server_state{}) ->
+	wx_object:cast(graphics, {bird_location, Y}),
 	{noreply, State};
 
 handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
@@ -67,10 +67,10 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	NewListOfAliveBirds = ListOfAliveBirds -- [BirdPID],   % bird is dead, remove it from alive birds
 	case NumOfAliveBirds of
 		1 ->
-			?PRINT(),
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
 			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds});
+		
 		_Else ->
 			ok
 	end,
