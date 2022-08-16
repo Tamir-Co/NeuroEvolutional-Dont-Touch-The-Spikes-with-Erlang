@@ -8,12 +8,12 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
--define(PRINT(Text, Arg), ok).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%
--define(PRINT(Text),  ok).%io:format(atom_to_list(Text) ++ "~n")).%
--define(PRINT(), ok).%io:format("~n")).%
+-define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%ok).%
+-define(PRINT(Text),  io:format(atom_to_list(Text) ++ "~n")).%ok).%
+-define(PRINT(), io:format("~n")).%ok).%
 
 
--define(INIT_PC_AMOUNT, 2).
+-define(INIT_PC_AMOUNT, 4).
 
 %% Frame structure:
 -define(BG_WIDTH, 400).
@@ -54,8 +54,8 @@
 -define(BIRD_START_Y, 320).
 
 -define(NUM_OF_BIRDS, 200).    % TODO 1000 or other number, and move to graphics
--define(PERCENT_SURVIVED_BIRDS, 0.25).   % how many birds are survived after each generation (in %)
--define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
+-define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
+-define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation, per PC and generation
 
 
 %% Neural network:
@@ -63,7 +63,7 @@
 
 -define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_FACTOR, 5).            % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_FACTOR, 10).            % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_MAX_RAND_VAL, 20).     % used to define the probability of a edge deletion (W=0)
 
 -define(ACTIVATION_FUNCTION, tanh).

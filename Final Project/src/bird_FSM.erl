@@ -88,7 +88,12 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			NN_PID ! {get_weights, self()},    % get weights from the NN
 			receive
 				{weights_list, WeightsList} ->
+						case FrameCount > 280 of
+							true  -> io:format("WeightsList ~p~n", [WeightsList]);
+							false -> ok
+						end,
 						gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC
+						NN_PID ! {spikes_list, ?INIT_SPIKE_LIST},
 						{next_state, idle, #bird{graphicState=play_NEAT, pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}}
 			end;
 			

@@ -100,7 +100,7 @@ random_weight(Idx) ->
 rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->
 	case Idx =< hd(?NN_STRUCTURE) * 2 of    % ?12? first neurons (input neurons)
 		true  -> Bias = 0;
-		false -> Bias = (rand:uniform() - 0.5) * 20    % [-0.5,0.5) * 10
+		false -> Bias = (rand:uniform() - 0.5) * 50    % [-0.5,0.5) * 50
 	end,
 	NeuronPID = lists:nth(NeuronsIdx, maps:get({layer, LayerIdx}, N_PIDsLayersMap)),
 	WeightsMap#{ {Idx, bias, NeuronPID} => Bias }.   % add bias to the NN map
