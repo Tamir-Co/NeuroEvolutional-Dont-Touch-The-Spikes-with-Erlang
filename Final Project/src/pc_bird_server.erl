@@ -53,7 +53,7 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{listOfAliveBi
 	msg_to_birds(ListOfAliveBirds, {spikes_list, SpikesList}, false),
 	{noreply, State};
 
-handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->  % TODO send only to alive birds
+handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
 	{noreply, State};
 
@@ -124,7 +124,6 @@ mutate_brain_and_send([BirdPID|BirdsListPID_T], Brain, NumOfMutations) ->
 %% Mutate a weight list (brain) randomly.
 %% WeightsMap = #{ {weight, LeftNeuronPID, RightNeuronPID} => Weight, {bias, NeuronPID} => Bias }.
 mutate_brain(Brain) ->
-%%	Fun = fun(W) -> W + (rand:uniform() - 0.5) / ?MUTATION_BIAS_FACTOR end,     % TODO W*(1+(rand-0.5)/20)
 	Fun =
 		fun(W) ->
 			case rand:uniform(?MUTATION_MAX_RAND_VAL) of

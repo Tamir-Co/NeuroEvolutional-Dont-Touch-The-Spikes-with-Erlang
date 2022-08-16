@@ -22,7 +22,7 @@ init(NetworkStructure) ->
 
 loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsList=N_PIDsList, spikesList=SpikesList}) ->
 	receive
-		{decide_jump, From, BirdHeight, BirdWallDistance} ->    % TODO send fewer SpikesList
+		{decide_jump, From, BirdHeight, BirdWallDistance} ->
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
 					true  -> gen_statem:cast(From, {jump}); % bird jump
 					false -> void                           % bird doesn't jump
