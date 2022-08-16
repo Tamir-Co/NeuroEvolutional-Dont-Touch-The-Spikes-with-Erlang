@@ -126,7 +126,7 @@ run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=Spi
 %% Receive bird location and spikes.
 %% Return true if bird disqualified and otherwise false
 is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
-	case (X =< ?SPIKE_HEIGHT_4 andalso Direction == l)  orelse (X >= ?RIGHT_WALL_X - ?SPIKE_HEIGHT_4 andalso Direction == r) of	% bird is near the wall
+	case (X =< ?SPIKE_HEIGHT_4 andalso Direction == l)  orelse (X >= ?BG_WIDTH - ?BIRD_WIDTH - ?SPIKE_HEIGHT_4 andalso Direction == r) of	% bird is near the wall
 		false -> false;				% bird still in the game
 		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
 					 0 -> false;	% bird still in the game because there is no spike near

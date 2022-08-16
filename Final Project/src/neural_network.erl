@@ -24,7 +24,6 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 	receive
 		{set_weights, NewWeightsList} ->
 				NewWeightsMap = set_weights(NewWeightsList, WeightsMap),
-			?PRINT('NewWeightsMap for NN', NewWeightsMap),
 				configure_NN(NewWeightsMap, N_PIDsList, 1),
 				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 

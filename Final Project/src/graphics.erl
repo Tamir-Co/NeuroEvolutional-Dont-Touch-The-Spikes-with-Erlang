@@ -78,7 +78,7 @@ init(_Args) ->
 	register(sound_proc, spawn(?MODULE, sound, [])),
 
 	% Init bird servers and split the work
-	{BirdUserPID, BirdServerPID} = init_system(),
+	{BirdUserPID, PcPIDs} = init_system(),
 	
 	io:format("BirdUserPID ~p~n", [BirdUserPID]),
 
@@ -98,8 +98,8 @@ init(_Args) ->
 		birdList = [],
 		curr_state = idle,
 		spikesList = ?INIT_SPIKE_LIST,
-		pcList = [BirdServerPID],     % TODO
-		waitForPCsAmount = 1     % TODO change to define - the length of PCs list
+		pcList = PcPIDs,
+		waitForPCsAmount = length(PcPIDs)
 	}}.
 
 %% =================================================================
@@ -221,7 +221,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 						sound_proc ! "bonus_trim",
 						NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
 						gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),
-						NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+						NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
 						NewScore = Score + 1;
 					
 					false ->
@@ -242,7 +242,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 							true  ->
 								NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
 								gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),	%SpikesList,
-								NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),      % TODO
+								NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
 								NewScore = Score + 1;
 							
 							false ->
@@ -254,7 +254,9 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 											% TODO delete?
 					false ->   % wait for some birds to send their location.
 						State
-				end
+				end;
+			
+			play_NEAT_population -> State
 		end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
@@ -384,21 +386,25 @@ merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose
 send_best_birds(BestCandBirds, [PC_PID]) -> gen_server:cast(PC_PID, {populate_next_gen, BestCandBirds});
 send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
 	?PRINT('send_best_birds(BestCandBirds', BestCandBirds),
-	{CurrPcWeights, NextPcsWeights} = lists:split(trunc(?NUM_OF_SURVIVED_BIRDS / 1), BestCandBirds),	% TODO divide by the amount of PCs
+	{CurrPcWeights, NextPcsWeights} = lists:split(trunc(?NUM_OF_SURVIVED_BIRDS / ?INIT_PC_AMOUNT), BestCandBirds),
 	gen_server:cast(PC_PID, {populate_next_gen, CurrPcWeights}),
 	send_best_birds(NextPcsWeights, PC_List).
 
 %% =================================================================
 init_system() ->
 	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), ?INIT_SPIKE_LIST, idle),    % the graphics owns the user bird
-	
-	PC_Name = list_to_atom("pc1_" ++ integer_to_list(erlang:unique_integer())),
-	{ok, BirdServerPID} = pc_bird_server:start(PC_Name, trunc(?NUM_OF_BIRDS / 1)),	% init pc bird server. TODO divide by the amount of PCs
-	
-	{BirdUserPID, BirdServerPID}.
+	PcPIDs = init_PCs(0, []),
+	{BirdUserPID, PcPIDs}.
+
+init_PCs(?INIT_PC_AMOUNT, PcPIDs) -> PcPIDs;
+init_PCs(Amount, PcPIDs) ->
+	PC_Name = list_to_atom("pc" ++ integer_to_list(Amount) ++ "_" ++ integer_to_list(erlang:unique_integer())),
+	{ok, PcPID} = pc_bird_server:start(PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)),	% init pc bird server
+	init_PCs(Amount+1, PcPIDs ++ [PcPID]).
 
 % build a new & unique bird FSM
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
+
 
 %% This function is done by the sound process
 %% Example of playing a sound from a file: os:cmd("aplay sounds/lose.wav")

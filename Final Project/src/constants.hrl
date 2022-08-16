@@ -13,8 +13,9 @@
 -define(PRINT(), ok).%io:format("~n")).%
 
 
+-define(INIT_PC_AMOUNT, 1).
+
 %% Frame structure:
--define(RIGHT_WALL_X, 350).		% TODO check
 -define(BG_WIDTH, 400).
 -define(BG_HEIGHT, 700).
 
@@ -36,7 +37,7 @@
 -define(TOP_BOTTOM_SPIKES_AMOUNT, 8).
 -define(SPIKES_LEFT_X, 20).
 -define(SPIKE_GAP_X, 9).
--define(SPIKES_BOTTOM_Y, (?BOTTOM_RECT_Y-?SPIKE_HEIGHT)). % TODO need this?
+-define(SPIKES_BOTTOM_Y, (?BOTTOM_RECT_Y-?SPIKE_HEIGHT)).
 -define(TOP_RECT_HEIGHT, 70).
 -define(BOTTOM_RECT_Y, 630). %?BG_HEIGHT-120
 -define(BOTTOM_RECT_HEIGHT, 70).
@@ -52,7 +53,7 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 200).    % TODO 1000 or other number, and move to graphics
+-define(NUM_OF_BIRDS, 1000).    % TODO 1000 or other number, and move to graphics
 -define(PERCENT_SURVIVED_BIRDS, 0.1).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation
 
