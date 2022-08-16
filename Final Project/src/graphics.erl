@@ -78,7 +78,7 @@ init(_Args) ->
 	register(sound_proc, spawn(?MODULE, sound, [])),
 
 	% Init bird servers and split the work
-	{BirdUserPID, PcPIDs} = init_system(),
+	{BirdUserPID} = init_system(),
 	
 	io:format("BirdUserPID ~p~n", [BirdUserPID]),
 
@@ -97,8 +97,8 @@ init(_Args) ->
 		birdUserPID = BirdUserPID,
 		curr_state = idle,
 		spikesList = ?INIT_SPIKE_LIST,
-		pcList = PcPIDs,
-		waitForPCsAmount = length(PcPIDs)
+		pcList = [],
+		waitForPCsAmount = ?INIT_PC_AMOUNT
 	}}.
 
 %% =================================================================
@@ -109,7 +109,7 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{pcLi
 			cast_all_PCs2(?PC_NAMES, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs2(?PC_NAMES, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(PC_List), numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=?INIT_PC_AMOUNT, numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
 		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
@@ -150,8 +150,8 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
 				FinalBestCandBirds = element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds))),
-				send_best_birds(FinalBestCandBirds, PC_List),
-				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(PC_List), bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
+				send_best_birds(FinalBestCandBirds, ?PC_NAMES),
+				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=?INIT_PC_AMOUNT, bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
 			_Else ->
 				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
@@ -167,7 +167,7 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 			cast_all_PCs2(?PC_NAMES, {start_simulation}),
 %%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs2(?PC_NAMES, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(PC_List), numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=?INIT_PC_AMOUNT, numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
@@ -407,14 +407,16 @@ merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose
 
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
-send_best_birds(BestCandBirds, [PC_PID]) ->
-	gen_server:cast(PC_PID, {populate_next_gen, BestCandBirds});
-send_best_birds(BestCandBirds, [PC_PID|PC_List]) ->
+send_best_birds(BestCandBirds, [PC_Name]) ->
+%%	gen_server:cast(PC_Name, {populate_next_gen, BestCandBirds}),
+	rpc:cast(PC_Name, pc_bird_server, pc_rpc, [PC_Name, {populate_next_gen, BestCandBirds}]);
+send_best_birds(BestCandBirds, [PC_Name|PC_NamesT]) ->
 	?PRINT('send_best_birds(BestCandBirds', BestCandBirds),
 %%	io:format("trunc(?NUM_OF_SURVIVED_BIRDS / ?INIT_PC_AMOUNT):  ~p\n", [trunc(?NUM_OF_SURVIVED_BIRDS / ?INIT_PC_AMOUNT)]),
 	{CurrPcWeights, NextPcsWeights} = lists:split(trunc(?NUM_OF_SURVIVED_BIRDS / ?INIT_PC_AMOUNT), BestCandBirds),
-	gen_server:cast(PC_PID, {populate_next_gen, CurrPcWeights}),
-	send_best_birds(NextPcsWeights, PC_List).
+%%	gen_server:cast(PC_Name, {populate_next_gen, CurrPcWeights}),
+	rpc:cast(PC_Name, pc_bird_server, pc_rpc, [PC_Name, {populate_next_gen, CurrPcWeights}]),
+	send_best_birds(NextPcsWeights, PC_NamesT).
 
 %% =================================================================
 init_system() ->
