@@ -76,7 +76,7 @@ init(_Args) ->
 
 	%% spawn sound maker process
 	register(sound_proc, spawn(?MODULE, sound, [])),
-
+	
 	% Init bird servers and split the work
 	{BirdUserPID} = init_system(),
 	cast_all_PCs2(?PC_NAMES, {are_you_alive}),
@@ -101,28 +101,29 @@ init(_Args) ->
 
 %% =================================================================
 handle_cast({im_alive, PC_Name}, State=#graphics_state{recvACKsPCsNamesList=RecvACKsPCsNamesList})->
-	NewRecvACKsPCsNamesList = RecvACKsPCsNamesList ++ [?PC_NAME_TO_NODE(PC_Name)],
+	io:format("~p is alive!~n", [PC_Name]),
+	NewRecvACKsPCsNamesList = RecvACKsPCsNamesList ++ [PC_Name],
 	{noreply, State#graphics_state{recvACKsPCsNamesList=NewRecvACKsPCsNamesList}};
 	
 handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{waitForPCsAmount=WaitForPCsAmount, alivePCsNamesList=AlivePCsNamesList})->
 	case WaitForPCsAmount of
 		1 ->
-%%			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
+			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
 			cast_all_PCs2(AlivePCsNamesList, {start_simulation}),
-%%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs2(AlivePCsNamesList, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=?INIT_PC_AMOUNT, numOfAliveBirds=?NUM_OF_BIRDS}};	% only after all birds had initialized, the graphics_state changes its state. TODO pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=?NUM_OF_BIRDS, birdsPerPcMap=NewBirdsPerPcMap}};	% only after all birds had initialized, the graphics_state changes its state.
 		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
 
-handle_cast({bird_location, Y}, State=#graphics_state{curr_state=CurrState, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList})->
+handle_cast({bird_location, Y, PC_Name}, State=#graphics_state{curr_state=CurrState, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList, birdsPerPcMap=BirdsPerPcMap})->
+	NewBirdsPerPcMap = BirdsPerPcMap#{ PC_Name := maps:get(PC_Name, BirdsPerPcMap) - 1 },
 	case CurrState of
 		play_user ->
 			NewState = State#graphics_state{birdUser=#bird{y=Y}};
 		play_NEAT_simulation ->
-			NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1}
+			NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1, birdsPerPcMap=NewBirdsPerPcMap}
 	end,
 	{noreply, NewState};
 
@@ -155,8 +156,8 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 %%				FinalBestCandBirds = element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds))),
 %%				io:format("FinalBestCandBirds ~p~n", [FinalBestCandBirds]),
 				FinalBestCandBirds = element(2, lists:unzip(NewBestCandBirds)),
-				send_best_birds(FinalBestCandBirds, AlivePCsNamesList),
-				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=?INIT_PC_AMOUNT,
+				send_best_birds(lists:reverse(FinalBestCandBirds), AlivePCsNamesList),
+				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(AlivePCsNamesList),
 					bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
 			_Else ->
@@ -168,11 +169,11 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, genNum=GenNum, score=Score, bestScore=BestScore})->
 	case WaitForPCsAmount of
 		1 ->
-%%			gen_server:cast(hd(PC_List), {start_simulation}),		% we can now goto start simulation TODO amount of PCs
+			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
 			cast_all_PCs2(AlivePCsNamesList, {start_simulation}),
-%%			gen_server:cast(hd(PC_List), {simulate_frame}),         % important for the first time
 			cast_all_PCs2(AlivePCsNamesList, {simulate_frame}),
-			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=?INIT_PC_AMOUNT, numOfAliveBirds=?NUM_OF_BIRDS, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=trunc(length(AlivePCsNamesList)*(?NUM_OF_BIRDS/?INIT_PC_AMOUNT)),
+										   birdsPerPcMap=NewBirdsPerPcMap, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
@@ -223,10 +224,10 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
 										 locatedBirdsAmount=LocatedBirdsAmount, numOfAliveBirds=NumOfAliveBirds, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
-										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount}) ->
+										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, birdsPerPcMap=BirdsPerPcMap}) ->
 	wxWindow:refresh(Frame), % refresh screen
 	
-	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList} = check_timeout(State),
+	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap} = check_timeout(State),
 	
 	NewState =
 		case CurrState of
@@ -255,15 +256,14 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 				
 			play_NEAT_simulation ->
-				todo,      % TODO hd(PC_List) all code
-				case LocatedBirdsAmount >= NumOfAliveBirds of   % all birds sent their location. TODO bad with PC down
+%%				case LocatedBirdsAmount >= NumOfAliveBirds of   % all birds sent their location.
+				case LocatedBirdsAmount >= maps:fold(fun(_, NumBirds, Acc) -> Acc + NumBirds end, 0, BirdsPerPcMap) of   % all birds sent their location.
 					true  ->
 						cast_all_PCs2(NewAlivePCsNamesList, {simulate_frame}),
 						{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 						case Has_changed_dir of
 							true  ->
 								NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-%%								gen_server:cast(hd(PC_List), {spikes_list, NewSpikesList}),
 								cast_all_PCs2(NewAlivePCsNamesList, {spikes_list, NewSpikesList}),
 								NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
 								NewScore = Score + 1;
@@ -283,7 +283,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 		end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
-	{noreply, NewState#graphics_state{timeCount=NewTimeCount, recvACKsPCsNamesList=NewRecvACKsPCsNamesList, alivePCsNamesList=NewAlivePCsNamesList}};
+	{noreply, NewState#graphics_state{timeCount=NewTimeCount, recvACKsPCsNamesList=NewRecvACKsPCsNamesList, alivePCsNamesList=NewAlivePCsNamesList, birdsPerPcMap=NewBirdsPerPcMap}};
 
 handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
@@ -337,21 +337,32 @@ handle_sync_event(_Event, _, State) ->
 
 %% =================================================================
 %% check if timeout occurred
-check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=RecvACKsPCsNamesList, alivePCsNamesList=AlivePCsNamesList, isExpectedAcks=IsExpectedAcks}) ->
+check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=RecvACKsPCsNamesList, alivePCsNamesList=AlivePCsNamesList, birdsPerPcMap=BirdsPerPcMap}) ->
 	case TimeCount >= ?TIMEOUT of
 		true ->     % timeout passed
 			NewTimeCount = 0,
 			NewAlivePCsNamesList = RecvACKsPCsNamesList,
 			NewRecvACKsPCsNamesList = [],
+			NewBirdsPerPcMap = update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList),
 			cast_all_PCs2(NewAlivePCsNamesList, {are_you_alive});
 		
 		false ->
 			NewTimeCount = TimeCount + ?TIMER,
 			NewAlivePCsNamesList = AlivePCsNamesList,
-			NewRecvACKsPCsNamesList = RecvACKsPCsNamesList
+			NewRecvACKsPCsNamesList = RecvACKsPCsNamesList,
+			NewBirdsPerPcMap = BirdsPerPcMap
 		end,
 
-	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList}.
+	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap}.
+
+
+update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList) ->
+	case AlivePCsNamesList -- RecvACKsPCsNamesList of
+		[] -> BirdsPerPcMap; % no new dead PC
+		DeadPCs -> maps:map(fun(PC_Name, Num_Birds) -> case lists:member(PC_Name, DeadPCs) of true -> 0; false -> Num_Birds  end end, BirdsPerPcMap)
+	end
+	.
+
 
 %% Simulates a x movement of a bird during one frame.
 %% the output is: {NewDirection, NewX, Has_changed_direction}
@@ -430,9 +441,9 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
-send_best_birds(BestCandBirds, [PC_Name]) ->
+send_best_birds(_BestCandBirds, []) ->
 %%	gen_server:cast(PC_Name, {populate_next_gen, BestCandBirds}),
-	rpc:call(?PC_NAME_TO_NODE(PC_Name), pc_bird_server, pc_rpc, [PC_Name, {populate_next_gen, BestCandBirds}]);
+	finish;%rpc:call(?PC_NAME_TO_NODE(PC_Name), pc_bird_server, pc_rpc, [PC_Name, {populate_next_gen, BestCandBirds}]);
 send_best_birds(BestCandBirds, [PC_Name|PC_NamesT]) ->
 	{CurrPcWeights, NextPcsWeights} = lists:split(trunc(?NUM_OF_SURVIVED_BIRDS / ?INIT_PC_AMOUNT), BestCandBirds),
 %%	gen_server:cast(PC_Name, {populate_next_gen, CurrPcWeights}),

@@ -22,6 +22,7 @@ start(PC_Name, NumOfPcBirds) ->
 
 %% =================================================================
 init([PC_Name, NumOfPcBirds]) ->
+	?PRINT(pcname, PC_Name),
 	{ok, #pc_bird_server_state{
 		pcName = PC_Name,
 		graphicState = idle,
@@ -65,9 +66,9 @@ handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListO
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
 	{noreply, State};
 
-handle_cast({bird_location, Y}, State=#pc_bird_server_state{}) ->
+handle_cast({bird_location, Y}, State=#pc_bird_server_state{pcName=PC_Name}) ->
 %%	wx_object:cast(graphics, {bird_location, Y}),
-	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{bird_location, Y}]),
+	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{bird_location, Y, PC_Name}]),
 	{noreply, State};
 
 handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
