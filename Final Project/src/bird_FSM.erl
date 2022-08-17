@@ -25,7 +25,7 @@ start(Name, PC_PID, SpikesList, GraphicState) ->
 init([PC_PID, SpikesList, GraphicState]) ->
 	case GraphicState of
 		idle        -> NN_PID = undefined;
-		play_NEAT   -> Self = self(), io:format("Bird Self ~p~n", [Self]), NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE, Self) end) % init NN
+		play_NEAT   -> Self = self(), NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE, Self) end) % init NN
 	end,
 	{ok, idle, #bird{pcPID = PC_PID,
 					 spikesList = SpikesList,
@@ -47,7 +47,7 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	end;
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
 %%	wx_object:cast(graphics, {brain, NewBrain}),
-	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{brain, NewBrain}]),
+%%	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{brain, NewBrain}]),
 	NN_PID ! {set_weights, NewBrain},
 %%	io:format("~ncast brain to graphics"),
 	{keep_state, Bird};
@@ -83,7 +83,6 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 	end;
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
 											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount, framesToDecide=FramesToDecide}) ->
-	?PRINT(),
 	{{IsDead, NextBird}, NewFramesToDecide}  =
 		case FramesToDecide of  % dont ask to jump each frame
 			0 ->
@@ -102,9 +101,8 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 %%	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->     % bird is dead
-			?PRINT(simulate_frame_play_NEAT_DEAD),
 			NN_PID ! {get_weights, self()},    % get weights from the NN
-			receive     % TODO after all
+			receive
 				{weights_list, WeightsList} ->
 						case FrameCount > 280 of
 							true  -> i;%o:format("WeightsList ~p~n", [WeightsList]);
@@ -170,15 +168,15 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
 %% Gets a height Y and returns the closest spike's index
 closest_spike(Y) ->
 	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP_Y,
-	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
+	min(?MAX_SPIKES_AMOUNT, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
 
-
-flush() ->
-	receive
-		_ -> flush()
-	after
-		0 -> ok
-	end.
+%%
+%%flush() ->
+%%	receive
+%%		_ -> flush()
+%%	after
+%%		0 -> ok
+%%	end.
 
 %% =================================================================
 terminate(_Reason, _StateName, _State) ->

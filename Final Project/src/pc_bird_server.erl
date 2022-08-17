@@ -22,7 +22,6 @@ start(PC_Name, NumOfPcBirds) ->
 
 %% =================================================================
 init([PC_Name, NumOfPcBirds]) ->
-	io:format("PC self ~p~n", [self()]),
 	{ok, #pc_bird_server_state{
 		pcName = PC_Name,
 		graphicState = idle,
@@ -42,7 +41,7 @@ handle_call(_Request, _From, _State) ->
 
 
 handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_state{pcName=PC_Name, birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
-	io:format("NumOfPcBirds ~p ~n", [NumOfPcBirds]),
+	io:format("Number of birds per PC: ~p~n", [NumOfPcBirds]),
 	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState),
 %%	wx_object:cast(graphics, {finish_init_birds, self(), GraphicState}),		% tell graphics the PC finished to all start_bird_FSMs
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{finish_init_birds, self(), GraphicState}]),
@@ -75,7 +74,6 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	case NumOfAliveBirds of
 		1 ->
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
-%%			io:format("NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS:   ~p\n", [NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS]),
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
 %%			wx_object:cast(graphics, {pc_finished_simulation, self(), CandBirds}),
 			rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_simulation, self(), CandBirds}]);
@@ -86,7 +84,6 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	{noreply, State#pc_bird_server_state{listOfAliveBirds=NewListOfAliveBirds, birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
-	io:format("~n~nMy BestBrain ~p~n~n", [BestBrains]),
 	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
 %%	wx_object:cast(graphics, {pc_finished_population, self()})
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_population, self()}]),
@@ -109,7 +106,7 @@ msg_to_birds([], _Msg, _IsMsg) -> done;
 msg_to_birds([Bird|Bird_T], Msg, IsMsg) ->
 	case IsMsg of
 		true -> Bird ! Msg;
-		false-> gen_statem:cast(Bird, Msg)%, ?PRINT(msg_to_birds, Msg)
+		false-> gen_statem:cast(Bird, Msg)
 	end,
 	msg_to_birds(Bird_T, Msg, IsMsg).
 
@@ -118,10 +115,9 @@ msg_to_birds([Bird|Bird_T], Msg, IsMsg) ->
 %% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
 create_mutations_and_send([], []) -> finish;
 create_mutations_and_send(BirdsListPID, [Brain|BrainT]) ->
-%%	io:format("trunc(1/?PERCENT_SURVIVED_BIRDS)-1 :   ~p\n", [trunc(1/?PERCENT_SURVIVED_BIRDS) - 1]),
 	RemainingPIDs = mutate_brain_and_send(BirdsListPID, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
 	case RemainingPIDs of
-		[] -> io:format("\nfinish\n"), finish;
+		[] -> finish;
 		[BirdPID|BirdsListPID_T] ->
 			BirdPID ! {replace_genes, Brain},     % keep each "brain" once
 			create_mutations_and_send(BirdsListPID_T, BrainT)  % mutate the remaining brains

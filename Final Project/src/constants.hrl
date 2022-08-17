@@ -27,9 +27,9 @@
 -define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%]).%
 
 
--define(PRINT(Text, Arg), k).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%o
--define(PRINT(Text), ok).% io:format(atom_to_list(Text) ++ "~n")).%
--define(PRINT(),ok).% io:format("~n")).%
+-define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%ok).%
+-define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).%ok).%
+-define(PRINT(),io:format("~n")).%ok).%
 
 
 %% Frame structure:
@@ -70,13 +70,13 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
-%% {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {2, 4, 0.5}, {4, 100, 0.2}, {4, 1000, 0.2}
--define(NUM_OF_BIRDS, 100).    % TODO 1000 or other number, and move to graphics
+%% {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {2, 4, 0.5}, {4, 100, 0.2}, {4, 400, 0.2}, {4, 1000, 0.2}
+-define(NUM_OF_BIRDS, 400).    % TODO 1000 or other number, and move to graphics
 -define(PERCENT_SURVIVED_BIRDS, 0.2).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation, per PC and generation
 
 
--define(FRAMES_BETWEEN_DECIDE_JUMP, 5).
+-define(FRAMES_BETWEEN_DECIDE_JUMP, 4).
 
 
 %% Neural network:
@@ -84,7 +84,7 @@
 
 -define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_FACTOR, 10).            % used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_FACTOR, 5).            % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_MAX_RAND_VAL, 20).     % used to define the probability of a edge deletion (W=0)
 
 -define(ACTIVATION_FUNCTION, tanh).
