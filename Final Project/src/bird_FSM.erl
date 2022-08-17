@@ -87,10 +87,11 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 	run_NN(Bird),       % ask NN whether to jump
 	{IsDead, NextBird}  =
 		receive
-			{jump2}      -> simulate_next_frame_bird(jump(Bird), SpikesList);
-			{dont_jump2} -> simulate_next_frame_bird(Bird, SpikesList)
+			{jump, FrameCount}      -> simulate_next_frame_bird(jump(Bird), SpikesList);
+			{dont_jump, FrameCount} -> simulate_next_frame_bird(Bird, SpikesList)
 		after ?TIMER     -> simulate_next_frame_bird(Bird, SpikesList)
 		end,
+	flush(),
 %%	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->     % bird is dead
@@ -163,6 +164,14 @@ is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
 closest_spike(Y) ->
 	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP_Y,
 	min(10, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
+
+
+flush() ->
+	receive
+		_ -> flush()
+	after
+		0 -> ok
+	end.
 
 %% =================================================================
 terminate(_Reason, _StateName, _State) ->

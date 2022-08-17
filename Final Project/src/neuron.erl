@@ -32,22 +32,22 @@ init() ->
 loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=Activation, origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs, outPIDs=OutPIDs}) ->
 	receive
 		{configure_neuron, NewWeights, NewBias, NewActivation, NewInPIDs, NewOutPIDs} ->
-				loop(#neuron_data{acc=0, weights=NewWeights, bias=NewBias, activation=NewActivation, origInPIDs=NewInPIDs, remInPIDs=NewInPIDs, outPIDs=NewOutPIDs});
+				loop(#neuron_data{acc=0, weights=NewWeights, bias=NewBias, activation=NewActivation, origInPIDs=NewInPIDs, remInPIDs=length(NewInPIDs), outPIDs=NewOutPIDs});
 		
 		{neuron, From, A} ->
-				case lists:member(From, RemInPIDs) of		% is the sender legal
-					true  -> ok;
-					false -> exit("illegal neuron sender!!!")
-				end,
+%%				case lists:member(From, RemInPIDs) of		% is the sender legal
+%%					true  -> ok;
+%%					false -> exit("illegal neuron sender!!!")
+%%				end,
 				W = maps:get(From, Weights),		% get the relevant input weight
 				Z = Acc + W*A,
-				case length(RemInPIDs) > 1 of		% check if the neuron hasn't received all its inputs yet
+				case RemInPIDs > 1 of		% check if the neuron hasn't received all its inputs yet
 					true  -> loop(#neuron_data{	acc=Z, weights=Weights, bias=Bias, activation=Activation,
-												origInPIDs=OrigInPIDs, remInPIDs = RemInPIDs -- [From], outPIDs = OutPIDs});
+												origInPIDs=OrigInPIDs, remInPIDs=RemInPIDs - 1, outPIDs = OutPIDs});
 					false -> MyA = activation_func(Activation, Z + Bias),
 							 [OutPID ! {neuron, self(), MyA} || OutPID <- OutPIDs],
 							 loop(#neuron_data{	acc=0, weights=Weights, bias=Bias, activation=Activation,
-								 				origInPIDs=OrigInPIDs, remInPIDs = OrigInPIDs, outPIDs = OutPIDs})
+								 				origInPIDs=OrigInPIDs, remInPIDs=length(OrigInPIDs), outPIDs = OutPIDs})
 				end
 		end.
 

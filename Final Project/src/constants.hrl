@@ -94,7 +94,7 @@
 
 
 %% Time:
--define(TIMER, 70).		% Graphics update timer
+-define(TIMER, 100).		% Graphics update timer
 -define(TIME_UNIT, 1).
 
 
@@ -165,7 +165,7 @@
 	weights = #{},		% input weights (W)
 	bias = 0,			% bias (B)
 	activation = ?ACTIVATION_FUNCTION,	% activation function (A)
-	remInPIDs = [],		% remaining input neuron PIDs. Change during the calculation (because of deleting)
+	remInPIDs = 0,		% remaining input neuron PIDs. Change during the calculation (because of deleting)
 	origInPIDs = [],	% original input neuron PIDs. Doesn't change
 	outPIDs = []		% output neuron PIDs
 }).
