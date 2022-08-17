@@ -136,7 +136,7 @@ handle_cast({brain, Brain}, State=#graphics_state{brainList=BrainList, genNum=GN
 	NewBrainList = BrainList ++ [Brain],
 	case length(NewBrainList) of
 		?NUM_OF_BIRDS ->
-			io:format("~n~n~p member!!!!! ~p~n", [GN, lists:member(BestPreviousBrain, NewBrainList)]),
+			io:format("~n~p member!!!!! ~p~n", [GN, lists:member(BestPreviousBrain, NewBrainList)]),
 			NewNewBrainList = [];
 		_   ->
 			NewNewBrainList = NewBrainList
