@@ -26,6 +26,8 @@
 -define(PC4_NAME, pc4).
 -define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%]).%
 
+-define(PC_NAME_TO_NODE(PC_Name), maps:get(PC_Name, #{ ?PC1_NAME => ?PC1_NODE, ?PC2_NAME => ?PC2_NODE, ?PC3_NAME => ?PC3_NODE, ?PC4_NAME => ?PC4_NODE })).
+
 
 -define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%ok).%
 -define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).%ok).%
@@ -99,6 +101,7 @@
 
 %% Time:
 -define(TIMER, 100).		% Graphics update timer
+-define(TIMEOUT, 500).      % for ACKs
 -define(TIME_UNIT, 1).
 
 
@@ -128,8 +131,13 @@
 	curr_state = idle,
 	spikesList = ?INIT_SPIKE_LIST,
 	spikesAmount = ?INIT_SPIKES_WALL_AMOUNT,
-	pcList = [],
+	recvACKsPCsNamesList = [],
+	alivePCsNamesList = ?PC_NAMES,
 	waitForPCsAmount,
+%%	currAlivePCs = ?INIT_PC_AMOUNT,
+%%	countAcksPCs = 0,
+	isExpectedAcks = false,
+	timeCount = 0,
 	genNum = 1,
 	bestPreviousBrain,
 	brainList = []
