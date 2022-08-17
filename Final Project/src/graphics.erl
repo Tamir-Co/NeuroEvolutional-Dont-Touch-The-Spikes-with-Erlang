@@ -227,7 +227,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, birdsPerPcMap=BirdsPerPcMap}) ->
 	wxWindow:refresh(Frame), % refresh screen
 	
-	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap} = check_timeout(State),
+	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap, NewWaitForPCsAmount} = check_timeout(State),
 	
 	NewState =
 		case CurrState of
@@ -283,7 +283,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 		end,
 
 	erlang:send_after(?TIMER, self(), timer),	% set new timer
-	{noreply, NewState#graphics_state{timeCount=NewTimeCount, recvACKsPCsNamesList=NewRecvACKsPCsNamesList, alivePCsNamesList=NewAlivePCsNamesList, birdsPerPcMap=NewBirdsPerPcMap}};
+	{noreply, NewState#graphics_state{timeCount=NewTimeCount, recvACKsPCsNamesList=NewRecvACKsPCsNamesList, alivePCsNamesList=NewAlivePCsNamesList, birdsPerPcMap=NewBirdsPerPcMap, waitForPCsAmount=NewWaitForPCsAmount}};
 
 handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
@@ -337,31 +337,31 @@ handle_sync_event(_Event, _, State) ->
 
 %% =================================================================
 %% check if timeout occurred
-check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=RecvACKsPCsNamesList, alivePCsNamesList=AlivePCsNamesList, birdsPerPcMap=BirdsPerPcMap}) ->
+check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=RecvACKsPCsNamesList, alivePCsNamesList=AlivePCsNamesList, birdsPerPcMap=BirdsPerPcMap, waitForPCsAmount=WaitForPCsAmount}) ->
 	case TimeCount >= ?TIMEOUT of
 		true ->     % timeout passed
 			NewTimeCount = 0,
 			NewAlivePCsNamesList = RecvACKsPCsNamesList,
 			NewRecvACKsPCsNamesList = [],
-			NewBirdsPerPcMap = update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList),
+			{NewBirdsPerPcMap, NewWaitForPCsAmount} = update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList, WaitForPCsAmount),
 			cast_all_PCs2(NewAlivePCsNamesList, {are_you_alive});
 		
 		false ->
 			NewTimeCount = TimeCount + ?TIMER,
 			NewAlivePCsNamesList = AlivePCsNamesList,
 			NewRecvACKsPCsNamesList = RecvACKsPCsNamesList,
-			NewBirdsPerPcMap = BirdsPerPcMap
+			NewBirdsPerPcMap = BirdsPerPcMap,
+			NewWaitForPCsAmount = WaitForPCsAmount
 		end,
 
-	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap}.
+	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap, NewWaitForPCsAmount}.
 
 
-update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList) ->
+update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList, WaitForPCsAmount) ->
 	case AlivePCsNamesList -- RecvACKsPCsNamesList of
-		[] -> BirdsPerPcMap; % no new dead PC
-		DeadPCs -> maps:map(fun(PC_Name, Num_Birds) -> case lists:member(PC_Name, DeadPCs) of true -> 0; false -> Num_Birds  end end, BirdsPerPcMap)
-	end
-	.
+		[] -> {BirdsPerPcMap, WaitForPCsAmount}; % no new dead PC
+		DeadPCs -> {maps:map(fun(PC_Name, Num_Birds) -> case lists:member(PC_Name, DeadPCs) of true -> 0; false -> Num_Birds  end end, BirdsPerPcMap), WaitForPCsAmount - length(DeadPCs)}
+	end.
 
 
 %% Simulates a x movement of a bird during one frame.
