@@ -117,15 +117,13 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
 
-handle_cast({bird_location, Y, PC_Name}, State=#graphics_state{curr_state=CurrState, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList, birdsPerPcMap=BirdsPerPcMap})->
+handle_cast({neat_bird_location, Y, PC_Name}, State=#graphics_state{curr_state=play_NEAT_simulation, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList, birdsPerPcMap=BirdsPerPcMap})->
 	NewBirdsPerPcMap = BirdsPerPcMap#{ PC_Name := maps:get(PC_Name, BirdsPerPcMap) - 1 },
-	case CurrState of
-		play_user ->
-			NewState = State#graphics_state{birdUser=#bird{y=Y}};
-		play_NEAT_simulation ->
-			NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1, birdsPerPcMap=NewBirdsPerPcMap}
-	end,
+	NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1, birdsPerPcMap=NewBirdsPerPcMap},
 	{noreply, NewState};
+
+handle_cast({user_bird_location, Y}, State)->
+	{noreply, State#graphics_state{birdUser=#bird{y=Y}}};
 
 handle_cast({neat_bird_disqualified}, State=#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=NumOfAliveBirds})->
 	{noreply, State#graphics_state{numOfAliveBirds=NumOfAliveBirds-1}};
