@@ -15,7 +15,7 @@
 -define(PC2_NODE,       'pc0@Nadav-VirtualBox').
 -define(PC3_NODE,       'pc0@Nadav-VirtualBox').
 -define(PC4_NODE,       'pc0@Nadav-VirtualBox').
--define(PC_NODES, [?PC1_NODE, ?PC2_NODE]).%, ?PC3_NODE, ?PC4_NODE]).%
+-define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
 
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).
 
@@ -24,7 +24,7 @@
 -define(PC2_NAME, pc2).
 -define(PC3_NAME, pc3).
 -define(PC4_NAME, pc4).
--define(PC_NAMES, [?PC1_NAME, ?PC2_NAME]).%, ?PC3_NAME, ?PC4_NAME]).%
+-define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%]).%
 
 
 -define(PRINT(Text, Arg), k).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%o
@@ -70,8 +70,9 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 320).
 
--define(NUM_OF_BIRDS, 4).    % TODO 1000 or other number, and move to graphics
--define(PERCENT_SURVIVED_BIRDS, 0.5).   % how many birds are survived after each generation (in %)
+%% {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {2, 4, 0.5}, {4, 100, 0.2}, {4, 1000, 0.2}
+-define(NUM_OF_BIRDS, 100).    % TODO 1000 or other number, and move to graphics
+-define(PERCENT_SURVIVED_BIRDS, 0.2).   % how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation, per PC and generation
 
 
@@ -79,7 +80,7 @@
 
 
 %% Neural network:
--define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 1]).
+-define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).
 
 -define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range

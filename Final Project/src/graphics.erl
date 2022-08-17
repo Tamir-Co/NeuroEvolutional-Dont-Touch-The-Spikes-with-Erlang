@@ -146,16 +146,20 @@ handle_cast({brain, Brain}, State=#graphics_state{brainList=BrainList, genNum=GN
 %% CandBirds = [{FrameCount1, WeightsList1}, {FrameCount2, WeightsList2}]
 handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, pcList=PC_List, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
 	?PRINT(pc_finished_simulation),
+	SortedBirds = lists:keysort(1, BestCandBirds ++ CandBirds),             % all birds are dead now, send them sorted (by frame count) to graphics
+	{_, NewBestCandBirds} = lists:split(length(SortedBirds) - ?NUM_OF_SURVIVED_BIRDS, SortedBirds),      % take only the ?100? best birds
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
-				FinalBestCandBirds = element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds))),
+%%				FinalBestCandBirds = element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds))),
+%%				io:format("FinalBestCandBirds ~p~n", [FinalBestCandBirds]),
+				FinalBestCandBirds = element(2, lists:unzip(NewBestCandBirds)),
 				send_best_birds(FinalBestCandBirds, ?PC_NODES, ?PC_NAMES),
 				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=?INIT_PC_AMOUNT,
 					bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
 			_Else ->
-				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
+%%				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
 				State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1, bestCandBirds=NewBestCandBirds}
 		end,
 	{noreply, NewState};
@@ -393,18 +397,18 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 
 
 %% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
-merge_birds([], CandBirds) -> CandBirds;
-merge_birds(BestCandBirds, CandBirds) ->
-	merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS).     % we only choose ceil(0.1*N) of all birds
-
-merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
-merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
-	{FrameCount1, _WeightsList1} = Bird1,
-	{FrameCount2, _WeightsList2} = Bird2,
-	case FrameCount1 < FrameCount2 of
-		true  -> merge_birds([Bird1|CandBirds1], CandBirds2, BestCandBirds ++ [Bird2], BirdsToChoose-1);
-		false -> merge_birds(CandBirds1, [Bird2|CandBirds2], BestCandBirds ++ [Bird1], BirdsToChoose-1)
-	end.
+%%merge_birds([], CandBirds) -> CandBirds;
+%%merge_birds(BestCandBirds, CandBirds) ->
+%%	merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS).     % we only choose ceil(0.1*N) of all birds
+%%
+%%merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
+%%merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
+%%	{FrameCount1, _WeightsList1} = Bird1,
+%%	{FrameCount2, _WeightsList2} = Bird2,
+%%	case FrameCount1 < FrameCount2 of
+%%		true  -> merge_birds([Bird1|CandBirds1], CandBirds2, BestCandBirds ++ [Bird2], BirdsToChoose-1);
+%%		false -> merge_birds(CandBirds1, [Bird2|CandBirds2], BestCandBirds ++ [Bird1], BirdsToChoose-1)
+%%	end.
 
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
