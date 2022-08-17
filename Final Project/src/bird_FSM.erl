@@ -25,7 +25,7 @@ start(Name, PC_PID, SpikesList, GraphicState) ->
 init([PC_PID, SpikesList, GraphicState]) ->
 	case GraphicState of
 		idle        -> NN_PID = undefined;
-		play_NEAT   -> Self = self(), NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE, Self) end) % init NN
+		play_NEAT   -> Self = self(), io:format("Bird Self ~p~n", [Self]), NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE, Self) end) % init NN
 	end,
 	{ok, idle, #bird{pcPID = PC_PID,
 					 spikesList = SpikesList,
@@ -43,7 +43,7 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 			{next_state, simulation, Bird#bird{graphicState=play_user, spikesList=?INIT_SPIKE_LIST}};    % graphics init this bird from the beginning
 		
 		play_NEAT ->
-			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST}}
+			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}}
 	end;
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
 %%	wx_object:cast(graphics, {brain, NewBrain}),
@@ -82,16 +82,23 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			{keep_state, NextBird}
 	end;
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
-											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
+											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount, framesToDecide=FramesToDecide}) ->
 	?PRINT(),
-	run_NN(Bird),       % ask NN whether to jump
-	{IsDead, NextBird}  =
-		receive
-			{jump, FrameCount}      -> simulate_next_frame_bird(jump(Bird), SpikesList);
-			{dont_jump, FrameCount} -> simulate_next_frame_bird(Bird, SpikesList)
-		after ?TIMER     -> simulate_next_frame_bird(Bird, SpikesList)
+	{{IsDead, NextBird}, NewFramesToDecide}  =
+		case FramesToDecide of  % dont ask to jump each frame
+			0 ->
+				run_NN(Bird),       % ask NN whether to jump
+				receive
+					{jump     , FrameCount} -> {simulate_next_frame_bird(jump(Bird), SpikesList), ?FRAMES_BETWEEN_DECIDE_JUMP};
+					{dont_jump, FrameCount} -> {simulate_next_frame_bird(Bird, SpikesList),       ?FRAMES_BETWEEN_DECIDE_JUMP}
+				after ?TIMER                -> {simulate_next_frame_bird(Bird, SpikesList),       ?FRAMES_BETWEEN_DECIDE_JUMP}
+				end;
+		
+			_ ->
+				{simulate_next_frame_bird(Bird, SpikesList), FramesToDecide - 1}
 		end,
-	flush(),
+	
+%%	flush(),
 %%	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->     % bird is dead
@@ -117,7 +124,7 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 %%			run_NN(NextBird),
 			#bird{y=Y} = NextBird,
 			gen_server:cast(PC_PID, {bird_location, Y}),
-			{keep_state, NextBird#bird{frameCount = FrameCount + 1}}
+			{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=NewFramesToDecide}}
 	end.
 
 

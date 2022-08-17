@@ -22,6 +22,7 @@ start(PC_Name, NumOfPcBirds) ->
 
 %% =================================================================
 init([PC_Name, NumOfPcBirds]) ->
+	io:format("PC self ~p~n", [self()]),
 	{ok, #pc_bird_server_state{
 		pcName = PC_Name,
 		graphicState = idle,
@@ -48,8 +49,10 @@ handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_st
 	{noreply, State#pc_bird_server_state{graphicState=GraphicState, birdsMap=NewBirdsMap}};
 
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
-	msg_to_birds(maps:keys(BirdsMap), {start_simulation}, true),
-	{noreply, State#pc_bird_server_state{numOfAliveBirds=NumOfPcBirds, listOfAliveBirds=maps:keys(BirdsMap)}};
+	BirdsMapKeys = maps:keys(BirdsMap),
+	EmptyBirdMap = maps:from_list([{BirdKey, {0, []}} || BirdKey <- BirdsMapKeys]),
+	msg_to_birds(BirdsMapKeys, {start_simulation}, true),
+	{noreply, State#pc_bird_server_state{numOfAliveBirds=NumOfPcBirds, listOfAliveBirds=maps:keys(BirdsMap), birdsMap=EmptyBirdMap}};
 
 handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->
 	msg_to_birds(ListOfAliveBirds, {spikes_list, SpikesList}, false),
@@ -83,6 +86,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 	{noreply, State#pc_bird_server_state{listOfAliveBirds=NewListOfAliveBirds, birdsMap=NewBirdsMap, numOfAliveBirds=NumOfAliveBirds-1}};
 
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
+	io:format("~n~nMy BestBrain ~p~n~n", [BestBrains]),
 	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
 %%	wx_object:cast(graphics, {pc_finished_population, self()})
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_population, self()}]),
