@@ -8,14 +8,23 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
-
+%% PC nodes depend on the shell amount
+%% TODO change only this!
 -define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
--define(PC1,            'pc1@Nadav-VirtualBox').
--define(PC2,            'pc2@Nadav-VirtualBox').
--define(PC3,            'pc3@Nadav-VirtualBox').
--define(PC4,            'pc4@Nadav-VirtualBox').
--define(PC_NAMES, [?PC1, ?PC2, ?PC3, ?PC4]).
--define(INIT_PC_AMOUNT, length(?PC_NAMES)).
+-define(PC1_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC2_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC3_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC4_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).
+
+-define(INIT_PC_AMOUNT, length(?PC_NODES)).
+
+%% PC names are always unique
+-define(PC1_NAME, pc1).
+-define(PC2_NAME, pc2).
+-define(PC3_NAME, pc3).
+-define(PC4_NAME, pc4).
+-define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).
 
 
 -define(PRINT(Text, Arg), k).%io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%o
@@ -67,7 +76,7 @@
 
 
 %% Neural network:
--define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).
+-define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 1]).
 
 -define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
