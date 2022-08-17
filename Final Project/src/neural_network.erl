@@ -11,22 +11,22 @@
 -include("constants.hrl").
 
 %% API
--export([init/1]).
+-export([init/2]).
 
 %% =================================================================
-init(NetworkStructure) ->
+init(NetworkStructure, BirdPID) ->
 	{N_PIDsList, N_PIDsLayersMap} = construct_NN(NetworkStructure),
 	WeightsMap = rand_weights(N_PIDsLayersMap),
 	configure_NN(WeightsMap, N_PIDsList, 1),
-	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList}).
+	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList, birdPID=BirdPID}).
 
-loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, n_PIDsList=N_PIDsList, spikesList=SpikesList}) ->
+loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, spikesList=SpikesList, n_PIDsList=N_PIDsList, birdPID=BirdPID}) ->
 	receive
-		{decide_jump, From, BirdHeight, BirdWallDistance, FrameCount} ->
+		{decide_jump, BirdHeight, BirdWallDistance, FrameCount} ->
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
 %%					true  -> gen_statem:cast(From, {jump}); % bird jump
-					true  -> From ! {jump, FrameCount}; % bird jump
-					false -> From ! {dont_jump, FrameCount}                           % bird doesn't jump
+					true  -> BirdPID ! {jump, FrameCount}; % bird jump
+					false -> BirdPID ! {dont_jump, FrameCount}                           % bird doesn't jump
 				end,
 				loop(NN_Data);
 		

@@ -156,8 +156,9 @@
 	networkStructure,   % [L1, L2, ...]
 	n_PIDsLayersMap,
 	weightsMap,
+	spikesList = ?INIT_SPIKE_LIST,
 	n_PIDsList,
-	spikesList = ?INIT_SPIKE_LIST
+	birdPID
 }).
 
 -record(neuron_data, {

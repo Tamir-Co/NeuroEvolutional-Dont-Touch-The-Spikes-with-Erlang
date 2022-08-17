@@ -25,7 +25,7 @@ start(Name, PC_PID, SpikesList, GraphicState) ->
 init([PC_PID, SpikesList, GraphicState]) ->
 	case GraphicState of
 		idle        -> NN_PID = undefined;
-		play_NEAT   -> NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE) end) % init NN
+		play_NEAT   -> Self = self(), NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE, Self) end) % init NN
 	end,
 	{ok, idle, #bird{pcPID = PC_PID,
 					 spikesList = SpikesList,
@@ -141,10 +141,10 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY, velocityY=VelocityY+?GRAVITY, direction=NewDirection}}.
 
 
-run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, spikesList=SpikesList}) ->
+run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, frameCount=FrameCount}) ->
 	case Direction of
-		r -> NN_PID ! {decide_jump, self(), Y, ?BG_WIDTH-X, SpikesList};
-		l -> NN_PID ! {decide_jump, self(), Y, X, SpikesList}
+		r -> NN_PID ! {decide_jump, Y, ?BG_WIDTH-X, FrameCount};
+		l -> NN_PID ! {decide_jump, Y, X, FrameCount}
 	end.
 
 
