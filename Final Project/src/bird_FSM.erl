@@ -141,7 +141,7 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 	end,
 
 	%% check if the bird touching top/bottom spikes, or bird touching wall spikes (only when heading to the wall and near it)
-	IsDead = (Y >= ?SPIKES_BOTTOM_Y-?BIRD_HEIGHT) orelse (Y =< ?SPIKES_TOP_Y) orelse is_bird_touch_wall_spike(Bird, SpikesList, NewDirection),
+	IsDead = (Y+?BIRD_HEIGHT >= ?BOTTOM_RECT_Y-?SPIKE_HEIGHT) orelse (Y =< ?TOP_RECT_HEIGHT+?SPIKE_HEIGHT) orelse is_bird_touch_wall_spike(Bird, SpikesList, NewDirection),
 	
 	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY, velocityY=VelocityY+?GRAVITY, direction=NewDirection}}.
 
@@ -155,8 +155,8 @@ run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, frameCount=Fra
 
 %% Receive bird location and spikes.
 %% Return true if bird disqualified and otherwise false
-is_bird_touch_wall_spike(_Bird=#bird{x=X, y=Y}, SpikesList, Direction) ->
-	case (X =< ?SPIKE_HEIGHT_4 andalso Direction == l)  orelse (X >= ?BG_WIDTH - ?BIRD_WIDTH - ?SPIKE_HEIGHT_4 andalso Direction == r) of	% bird is near the wall
+is_bird_touch_wall_spike(#bird{x=X, y=Y}, SpikesList, Direction) ->
+	case (Direction == r andalso X+?BIRD_WIDTH >= ?BG_WIDTH-?SPIKE_HEIGHT_4) orelse (Direction == l andalso X =< ?SPIKE_HEIGHT_4) of	% bird is near the wall
 		false -> false;				% bird still in the game
 		true  -> case lists:nth(closest_spike(Y), SpikesList) of	% check closest spike
 					 0 -> false;	% bird still in the game because there is no spike near

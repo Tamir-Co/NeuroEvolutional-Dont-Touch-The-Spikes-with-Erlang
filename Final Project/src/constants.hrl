@@ -10,11 +10,16 @@
 
 %% PC nodes depend on the shell amount
 %% TODO change only this!
--define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
--define(PC1_NODE,       'pc0@Nadav-VirtualBox').
--define(PC2_NODE,       'pc0@Nadav-VirtualBox').
--define(PC3_NODE,       'pc0@Nadav-VirtualBox').
--define(PC4_NODE,       'pc0@Nadav-VirtualBox').
+-define(GRAPHICS_NODE,  'pc0@tamir').
+-define(PC1_NODE,       'pc1@tamir').
+-define(PC2_NODE,       'pc2@tamir').
+-define(PC3_NODE,       'pc3@tamir').
+-define(PC4_NODE,       'pc4@tamir').
+%-define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
+%-define(PC1_NODE,       'pc0@Nadav-VirtualBox').
+%-define(PC2_NODE,       'pc0@Nadav-VirtualBox').
+%-define(PC3_NODE,       'pc0@Nadav-VirtualBox').
+%-define(PC4_NODE,       'pc0@Nadav-VirtualBox').
 -define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
 
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).
@@ -42,19 +47,19 @@
 %% Spikes:
 -define(INIT_SPIKE_LIST, [0 || _ <- lists:seq(1, ?MAX_SPIKES_AMOUNT)]).
 -define(SPIKE_VALUE, 10).
--define(MAX_SPIKES_AMOUNT, 10).
+-define(MAX_SPIKES_AMOUNT, 9).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
 -define(ADD_SPIKES_WALL_TOUCH, 1).
--define(INIT_SPIKES_WALL_AMOUNT, 1).
--define(SPIKE_WIDTH, 36).
+-define(INIT_SPIKES_WALL_AMOUNT, 7).
+-define(SPIKE_WIDTH, 42).
 -define(SPIKE_HEIGHT, 25).
--define(SPIKE_HEIGHT_4, 6).
--define(SPIKE_HALF_WIDTH, 18).
--define(SPIKE_GAP_Y, 14).
--define(SPIKES_TOP_Y, 100).
+-define(SPIKE_HEIGHT_4, 8).
+-define(SPIKE_HALF_WIDTH, 21).
+-define(SPIKE_GAP_Y, 10).
+-define(SPIKES_TOP_Y, 120).
 
 -define(TOP_BOTTOM_SPIKES_AMOUNT, 8).
--define(SPIKES_LEFT_X, 20).
+-define(SPIKES_LEFT_X, 19).
 -define(SPIKE_GAP_X, 9).
 -define(SPIKES_BOTTOM_Y, (?BOTTOM_RECT_Y-?SPIKE_HEIGHT)).
 -define(TOP_RECT_HEIGHT, 70).
