@@ -1,21 +1,9 @@
 # NeuroEvolutional "Don't Touch The Spikes" with Erlang
-## by Tamir Cohen & Nadav Hadad
+# by Tamir Cohen & Nadav Hadad
 
-useful links:
-https://arifishaq.files.wordpress.com/2018/04/wxerlang-speeding-up.pdf
-
-
-# Flappy Bird NeuroEvolution learning with Erlang
-**by Omri Gil and Tomer Shaked**
-
-This project is the final assignment in the "Functional programming for parallel and distributed systems". we implemented a full flappy bird clone which is autonomously controlled by a neural network.
-
-the network learns through a genetic process. In each iteration we spawn up to a few thousand networks and compare their result solving the same pipes. we then kill the worst 75% of networks and use the 25% remaining networks to repopulate. each repopulated network passes through a random mutation.
-
-the whole system is fault tolerant. if a neural network falls mid run it would get restarted without any notice in the system. if a whole computer/node gets disconnected all the responsibilities of that computer will be passed to a different live node without stopping the learning process or the graphics.
 
 ## Installation
-we are using erlang version 22 on ubuntu. this will probably also work on windows but it was not tested.
+we are using erlang version 25 on ubuntu. this will probably also work on windows but it was not tested.
 Use the package manager to install erlang:
 ```bash
 sodu apt-get install erlang
@@ -84,15 +72,12 @@ cover:compile_directory().
 to compile the code.
 then only on the console which is pc1 run the following command:
 ```erlang
-graphics:start(<number_of_networks>).
+graphics:start().
 ```
-where <number of networks> is how many birds you want to run in parallel on all computers. number of networks can run between 100 to 2000(not limited) depending on the strength of the computer/s you are using. The only restriction is that the number of networks will divide by 4. suggested default is 1000.
 
-to start running the program press the start button. you can use the toggle graphics button to disable the graphics and get up to a x10 times increase in speed.
-
-## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
+### all together
+erl -sname 'pc0' -setcookie yummy
+cover:compile_directory().
+graphics:start().
 
 
