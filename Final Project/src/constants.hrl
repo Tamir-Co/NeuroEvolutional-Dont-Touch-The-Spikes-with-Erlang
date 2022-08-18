@@ -16,10 +16,10 @@
 %-define(PC3_NODE,       'pc3@tamir').
 %-define(PC4_NODE,       'pc4@tamir').
 -define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
--define(PC1_NODE,       'pc0@Nadav-VirtualBox').
--define(PC2_NODE,       'pc0@Nadav-VirtualBox').
--define(PC3_NODE,       'pc0@Nadav-VirtualBox').
--define(PC4_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC1_NODE,       'pc1@Nadav-VirtualBox').
+-define(PC2_NODE,       'pc2@Nadav-VirtualBox').
+-define(PC3_NODE,       'pc3@Nadav-VirtualBox').
+-define(PC4_NODE,       'pc4@Nadav-VirtualBox').
 -define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
 
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).

@@ -227,8 +227,9 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 %% =================================================================
 %% We reach here each timer event
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
-										 locatedBirdsAmount=LocatedBirdsAmount, numOfAliveBirds=NumOfAliveBirds, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
-										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, birdsPerPcMap=BirdsPerPcMap}) ->
+										 locatedBirdsAmount=LocatedBirdsAmount, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
+										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, birdsPerPcMap=BirdsPerPcMap,
+										 bestCandBirds=BestCandBirds}) ->
 	wxWindow:refresh(Frame), % refresh screen
 	
 	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap, NewWaitForPCsAmount} = check_timeout(State),
@@ -260,27 +261,36 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 				
 			play_NEAT_simulation ->
-%%				case LocatedBirdsAmount >= NumOfAliveBirds of   % all birds sent their location.
-				case LocatedBirdsAmount >= maps:fold(fun(_, NumBirds, Acc) -> Acc + NumBirds end, 0, BirdsPerPcMap) of   % all birds sent their location.
-					true  ->
-						cast_all_PCs2(NewAlivePCsNamesList, {simulate_frame}),
-						{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-						case Has_changed_dir of
+				NumOfAliveBirds = maps:fold(fun(_, NumBirds, Acc) -> Acc + NumBirds end, 0, BirdsPerPcMap),
+				case NumOfAliveBirds of
+					0 ->    % go to population when last PC died
+						FinalBestCandBirds = element(2, lists:unzip(BestCandBirds)),
+						send_best_birds(lists:reverse(FinalBestCandBirds), NewAlivePCsNamesList),
+						State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(NewAlivePCsNamesList),
+						bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
+					
+					_ ->
+						case LocatedBirdsAmount >= NumOfAliveBirds of   % all birds sent their location.
 							true  ->
-								NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-								cast_all_PCs2(NewAlivePCsNamesList, {spikes_list, NewSpikesList}),
-								NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
-								NewScore = Score + 1;
-							
-							false ->
-								NewSpikesList = SpikesList,
-								NewSpikesAmount = SpikesAmount,
-								NewScore = Score
-						end,
-						State#graphics_state{birdList=sets:new(), locatedBirdsAmount=0, bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
-											% TODO delete?
-					false ->   % wait for some birds to send their location.
-						State
+								cast_all_PCs2(NewAlivePCsNamesList, {simulate_frame}),
+								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
+								case Has_changed_dir of
+									true  ->
+										NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
+										cast_all_PCs2(NewAlivePCsNamesList, {spikes_list, NewSpikesList}),
+										NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
+										NewScore = Score + 1;
+									
+									false ->
+										NewSpikesList = SpikesList,
+										NewSpikesAmount = SpikesAmount,
+										NewScore = Score
+								end,
+								State#graphics_state{birdList=sets:new(), locatedBirdsAmount=0, bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
+													% TODO delete?
+							false ->   % wait for some birds to send their location.
+								State
+						end
 				end;
 			
 			play_NEAT_population -> State
