@@ -66,13 +66,13 @@ handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListO
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
 	{noreply, State};
 
-handle_cast({neat_bird_location, Y}, State=#pc_bird_server_state{pcName=PC_Name}) ->
-	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_location, Y, PC_Name}]),
+handle_cast({neat_bird_location, Y}, State=#pc_bird_server_state{}) ->
+	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_location, Y}]),
 	{noreply, State};
 
-handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
+handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{pcName=PC_Name, listOfAliveBirds=ListOfAliveBirds, birdsMap=BirdsMap, numOfAliveBirds=NumOfAliveBirds, numOfPcBirds=NumOfPcBirds}) ->
 %%	wx_object:cast(graphics, {neat_bird_disqualified}),
-	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_disqualified}]),
+	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_disqualified, PC_Name}]),
 	NewBirdsMap = BirdsMap#{BirdPID := {FrameCount, WeightsList}},  % update birds map
 	NewListOfAliveBirds = ListOfAliveBirds -- [BirdPID],   % bird is dead, remove it from alive birds
 	case NumOfAliveBirds of

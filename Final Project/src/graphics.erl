@@ -56,9 +56,13 @@ init(_Args) ->
 	wxPanel:setSizer(Frame, MainSizer),
 	wxSizer:setSizeHints(MainSizer, Frame),
 	
-	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0", [{style, ?wxALIGN_CENTRE}]),	%{size, {100, 100}}, 
+	TxtScore = wxStaticText:new(Panel, -1, "Score: 0\nBest score: 0", [{style, ?wxALIGN_CENTRE}]),
 	FontScore = wxFont:new(13, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
 	wxStaticText:setFont(TxtScore, FontScore),
+	
+	TxtBirdsPerPc = wxStaticText:new(Panel, -1, "", [{style, ?wxALIGN_CENTRE}, {pos, {15, ?BOTTOM_RECT_Y+30}}]),
+	FontBirdsPerPC = wxFont:new(9, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
+	wxStaticText:setFont(TxtBirdsPerPc, FontBirdsPerPC),
 	
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
 	ImageBird_L = wxImage:mirror(ImageBird_R),
@@ -86,6 +90,7 @@ init(_Args) ->
 		panel = Panel,
 		brush = Brush,
 		textScore = TxtScore,
+		textBirdsPerPC = TxtBirdsPerPc,
 		mainSizer = MainSizer,
 		uiSizer = UiSizer,
 		startSizer = StartSizer,
@@ -109,6 +114,7 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 	case WaitForPCsAmount of
 		1 ->
 			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
+			?PRINT(finish_init, NewBirdsPerPcMap),
 			cast_all_PCs2(AlivePCsNamesList, {start_simulation}),
 			cast_all_PCs2(AlivePCsNamesList, {simulate_frame}),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=?NUM_OF_BIRDS, birdsPerPcMap=NewBirdsPerPcMap}};	% only after all birds had initialized, the graphics_state changes its state.
@@ -117,16 +123,16 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
 
-handle_cast({neat_bird_location, Y, PC_Name}, State=#graphics_state{curr_state=play_NEAT_simulation, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList, birdsPerPcMap=BirdsPerPcMap})->
-	NewBirdsPerPcMap = BirdsPerPcMap#{ PC_Name := maps:get(PC_Name, BirdsPerPcMap) - 1 },
-	NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1, birdsPerPcMap=NewBirdsPerPcMap},
+handle_cast({neat_bird_location, Y}, State=#graphics_state{curr_state=play_NEAT_simulation, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList})->
+	NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1},
 	{noreply, NewState};
 
 handle_cast({user_bird_location, Y}, State)->
 	{noreply, State#graphics_state{birdUser=#bird{y=Y}}};
 
-handle_cast({neat_bird_disqualified}, State=#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=NumOfAliveBirds})->
-	{noreply, State#graphics_state{numOfAliveBirds=NumOfAliveBirds-1}};
+handle_cast({neat_bird_disqualified, PC_Name}, State=#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=NumOfAliveBirds, birdsPerPcMap=BirdsPerPcMap})->
+	NewBirdsPerPcMap = BirdsPerPcMap#{ PC_Name := maps:get(PC_Name, BirdsPerPcMap) - 1 },
+	{noreply, State#graphics_state{numOfAliveBirds=NumOfAliveBirds-1, birdsPerPcMap=NewBirdsPerPcMap}};
 
 handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_user})->
 	sound_proc ! "lose_trim",
@@ -290,7 +296,7 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush,
 													bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, birdUser=#bird{y=Y},
 													bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore,
-													textScore=TxtScore, genNum=GenNum}) ->
+													textScore=TxtScore, textBirdsPerPC=TxtBirdsPerPC, birdsPerPcMap=BirdsPerPcMap, genNum=GenNum}) ->
 	
 	DC = wxPaintDC:new(Panel),
 	BitmapBird = case Direction of
@@ -310,6 +316,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 		
 		play_NEAT_simulation ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
+			wxStaticText:setLabel(TxtBirdsPerPC, io_lib:format("~p", [BirdsPerPcMap])),
 			List = sets:to_list(BirdList),
 %%			io:format("list of birds ~p~n", [List]),
 			draw_birds(DC, BitmapBird, X, List);
