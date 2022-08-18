@@ -154,6 +154,8 @@ receive_NN_output(OutputNeuronPID) ->
 %% Feed the neural network with its inputs
 feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList) ->
 	Layer1Len = length(maps:get({layer, 1}, N_PIDsLayersMap)),
+	?PRINT(layer1Len, Layer1Len),
+	?PRINT(hd_NN_STructure, hd(?NN_STRUCTURE)),
 	Self = self(),
 	lists:nth(Layer1Len, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdHeight},			% insert BirdHeight
 	lists:nth(Layer1Len-1, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdWallDistance},	% insert BirdWallDistance
