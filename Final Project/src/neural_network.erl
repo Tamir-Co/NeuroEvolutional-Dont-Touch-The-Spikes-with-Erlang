@@ -154,19 +154,17 @@ receive_NN_output(OutputNeuronPID) ->
 %% Feed the neural network with its inputs
 feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList) ->
 	Layer1Len = length(maps:get({layer, 1}, N_PIDsLayersMap)),
-	?PRINT(layer1Len, Layer1Len),
-	?PRINT(hd_NN_STructure, hd(?NN_STRUCTURE)),
 	Self = self(),
 	lists:nth(Layer1Len, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdHeight},			% insert BirdHeight
 	lists:nth(Layer1Len-1, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdWallDistance},	% insert BirdWallDistance
-	feed_spike_list(N_PIDsLayersMap, SpikesList, Layer1Len-2).			% insert SpikesList
+	feed_spike_list(maps:get({layer, 1}, N_PIDsLayersMap), SpikesList, ?MAX_SPIKES_AMOUNT).			% insert SpikesList
 
 %% Insert spike list
-feed_spike_list(_N_PIDsLayersMap, _SpikesList, 0) -> ok;
-feed_spike_list(N_PIDsLayersMap, SpikesList, Idx) ->
+feed_spike_list(_FirstLayerN_PIDs, _SpikesList, 0) -> ok;
+feed_spike_list(FirstLayerN_PIDs, SpikesList, Idx) ->
 	Self = self(),
-	lists:nth(Idx, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, lists:nth(Idx, SpikesList) * ?SPIKE_VALUE},  % TODO change * (mult)
-	feed_spike_list(N_PIDsLayersMap, SpikesList, Idx-1).
+	lists:nth(Idx, FirstLayerN_PIDs) ! {neuron, Self, lists:nth(Idx, SpikesList) * (?SPIKES_TOP_Y + Idx*(?SPIKE_WIDTH + ?SPIKE_GAP_Y))},
+	feed_spike_list(FirstLayerN_PIDs, SpikesList, Idx-1).
 
 
 %% returns a new (updated) WeightsMap
