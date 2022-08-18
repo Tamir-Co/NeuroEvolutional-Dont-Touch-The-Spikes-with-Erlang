@@ -318,10 +318,12 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 	case CurrState of
 		idle ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel),
+			wxStaticText:setLabel(TxtBirdsPerPC, ""),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_user ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel),
+			wxStaticText:setLabel(TxtBirdsPerPC, ""),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_NEAT_simulation ->
@@ -333,6 +335,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 		
 		play_NEAT_population ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
+			wxStaticText:setLabel(TxtBirdsPerPC, io_lib:format("~p", [BirdsPerPcMap])),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y})
 	end,
 	
