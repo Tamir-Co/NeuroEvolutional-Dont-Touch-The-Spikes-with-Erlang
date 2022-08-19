@@ -87,11 +87,11 @@
 
 
 %% Neural network:
--define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).
+-define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).		% This is the structure of the network. The first and last number from the list are the in/outputs layers.
 
 -define(BIAS_RANGE, 50).				% used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_WEIGHT_FACTOR, 20).	% used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_BIAS_FACTOR, 1).		% used in division of the range [-0.5,0.5] to a smaller range
+% -define(MUTATION_WEIGHT_FACTOR, 20).	% used in division of the range [-0.5,0.5] to a smaller range
+% -define(MUTATION_BIAS_FACTOR, 1).		% used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_FACTOR, 5).			% used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_MAX_RAND_VAL, 20).		% used to define the probability of a edge deletion (W=0)
 
