@@ -15,11 +15,11 @@
 %-define(PC2_NODE,       'pc2@tamir').
 %-define(PC3_NODE,       'pc3@tamir').
 %-define(PC4_NODE,       'pc4@tamir').
--define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
--define(PC1_NODE,       'pc1@Nadav-VirtualBox').
--define(PC2_NODE,       'pc2@Nadav-VirtualBox').
--define(PC3_NODE,       'pc3@Nadav-VirtualBox').
--define(PC4_NODE,       'pc4@Nadav-VirtualBox').
+-define(GRAPHICS_NODE,  'pc0@nadavhd-VirtualBox').
+-define(PC1_NODE,       'pc1@nadavhd-VirtualBox').
+-define(PC2_NODE,       'pc2@nadavhd-VirtualBox').
+-define(PC3_NODE,       'pc3@nadavhd-VirtualBox').
+-define(PC4_NODE,       'pc4@nadavhd-VirtualBox').
 -define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
 
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).
@@ -41,13 +41,13 @@
 
 %% Frame structure:
 -define(BG_WIDTH, 400).
--define(BG_HEIGHT, 700).
+-define(BG_HEIGHT, 600).
 
 
 %% Spikes:
 -define(INIT_SPIKE_LIST, [0 || _ <- lists:seq(1, ?MAX_SPIKES_AMOUNT)]).
 -define(SPIKE_VALUE, 10).
--define(MAX_SPIKES_AMOUNT, 9).
+-define(MAX_SPIKES_AMOUNT, 7).
 -define(MAX_RATIONAL_SPIKES_AMOUNT, (?MAX_SPIKES_AMOUNT-2)).
 -define(ADD_SPIKES_WALL_TOUCH, 1).
 -define(INIT_SPIKES_WALL_AMOUNT, 1).
@@ -63,7 +63,7 @@
 -define(SPIKE_GAP_X, 11).
 -define(SPIKES_BOTTOM_Y, (?BOTTOM_RECT_Y-?SPIKE_HEIGHT)).
 -define(TOP_RECT_HEIGHT, 70).
--define(BOTTOM_RECT_Y, 630). %?BG_HEIGHT-120
+-define(BOTTOM_RECT_Y, 530). %?BG_HEIGHT-120
 -define(BOTTOM_RECT_HEIGHT, 70).
 
 
@@ -75,7 +75,7 @@
 -define(JUMP_VELOCITY, 15).
 -define(X_VELOCITY, 7).
 -define(BIRD_START_X, 180).
--define(BIRD_START_Y, 320).
+-define(BIRD_START_Y, 270).
 
 %% {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {2, 4, 0.5}, {4, 100, 0.2}, {4, 400, 0.2}, {4, 1000, 0.2}
 -define(NUM_OF_BIRDS, 400).    % TODO 1000 or other number, and move to graphics

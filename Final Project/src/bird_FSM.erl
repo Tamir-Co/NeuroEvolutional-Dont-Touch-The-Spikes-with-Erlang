@@ -174,10 +174,10 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY, velocityY=VelocityY+?GRAVITY, direction=NewDirection}}.
 
 
-run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID, frameCount=FrameCount}) ->
+run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID}) ->
 	case Direction of
-		r -> NN_PID ! {decide_jump, Y, ?BG_WIDTH-X, FrameCount};
-		l -> NN_PID ! {decide_jump, Y, X, FrameCount}
+		r -> NN_PID ! {decide_jump, Y, ?BG_WIDTH-X};
+		l -> NN_PID ! {decide_jump, Y, X}
 	end.
 
 
