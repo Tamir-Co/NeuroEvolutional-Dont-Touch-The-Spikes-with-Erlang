@@ -198,13 +198,6 @@ closest_spike(Y) ->
 	SpikeSlotHeight = ?SPIKE_WIDTH + ?SPIKE_GAP_Y,
 	min(?MAX_SPIKES_AMOUNT, 1 + trunc((Y-?SPIKES_TOP_Y) / SpikeSlotHeight + 0.5)).
 
-%%
-%%flush() ->
-%%	receive
-%%		_ -> flush()
-%%	after
-%%		0 -> ok
-%%	end.
 
 %% =================================================================
 terminate(_Reason, _StateName, _State) ->
@@ -213,3 +206,4 @@ terminate(_Reason, _StateName, _State) ->
 
 stop() ->
 	gen_statem:stop(bird_FSM, normal, infinity).
+

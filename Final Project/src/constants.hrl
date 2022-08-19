@@ -63,7 +63,7 @@
 -define(SPIKE_GAP_X, 11).
 -define(SPIKES_BOTTOM_Y, (?BOTTOM_RECT_Y-?SPIKE_HEIGHT)).
 -define(TOP_RECT_HEIGHT, 70).
--define(BOTTOM_RECT_Y, 530). %?BG_HEIGHT-120
+-define(BOTTOM_RECT_Y, 530).		%?BG_HEIGHT-120
 -define(BOTTOM_RECT_HEIGHT, 70).
 
 
@@ -78,8 +78,8 @@
 -define(BIRD_START_Y, 270).
 
 %% {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {2, 4, 0.5}, {4, 100, 0.2}, {4, 400, 0.2}, {4, 1000, 0.2}
--define(NUM_OF_BIRDS, 400).    % TODO 1000 or other number, and move to graphics
--define(PERCENT_SURVIVED_BIRDS, 0.2).   % how many birds are survived after each generation (in %)
+-define(NUM_OF_BIRDS, 400).		% TODO 1000 or other number, and move to graphics
+-define(PERCENT_SURVIVED_BIRDS, 0.2).	% how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation, per PC and generation
 
 
@@ -89,10 +89,11 @@
 %% Neural network:
 -define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).
 
--define(MUTATION_WEIGHT_FACTOR, 20).    % used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_BIAS_FACTOR, 1).       % used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_FACTOR, 5).            % used in division of the range [-0.5,0.5] to a smaller range
--define(MUTATION_MAX_RAND_VAL, 20).     % used to define the probability of a edge deletion (W=0)
+-define(BIAS_RANGE, 50).				% used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_WEIGHT_FACTOR, 20).	% used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_BIAS_FACTOR, 1).		% used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_FACTOR, 5).			% used in division of the range [-0.5,0.5] to a smaller range
+-define(MUTATION_MAX_RAND_VAL, 20).		% used to define the probability of a edge deletion (W=0)
 
 -define(ACTIVATION_FUNCTION, tanh).
 -define(INPUT_ACTIVATION_FUNCTION, identity).
@@ -106,7 +107,7 @@
 
 %% Time:
 -define(TIMER, 100).		% Graphics update timer
--define(TIMEOUT, 500).      % for ACKs
+-define(TIMEOUT, 500).		% for ACKs
 -define(TIME_UNIT, 1).
 
 

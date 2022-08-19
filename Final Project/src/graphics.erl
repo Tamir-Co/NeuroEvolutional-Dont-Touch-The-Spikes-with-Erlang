@@ -83,7 +83,7 @@ init(_Args) ->
 	
 	% Init bird servers and split the work
 	{BirdUserPID} = init_system(),
-	cast_all_PCs2(?PC_NAMES, {are_you_alive}),
+	cast_all_PCs(?PC_NAMES, {are_you_alive}),
 
 	{Frame, #graphics_state{
 		frame = Frame,
@@ -115,8 +115,8 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 		1 ->
 			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
 			?PRINT(finish_init, NewBirdsPerPcMap),
-			cast_all_PCs2(AlivePCsNamesList, {start_simulation}),
-			cast_all_PCs2(AlivePCsNamesList, {simulate_frame}),
+			cast_all_PCs(AlivePCsNamesList, {start_simulation}),
+			cast_all_PCs(AlivePCsNamesList, {simulate_frame}),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=?NUM_OF_BIRDS, birdsPerPcMap=NewBirdsPerPcMap}};	% only after all birds had initialized, the graphics_state changes its state.
 		
 		_Else ->
@@ -157,15 +157,12 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
-%%				FinalBestCandBirds = element(2, lists:unzip(merge_birds(BestCandBirds, CandBirds))),
-%%				io:format("FinalBestCandBirds ~p~n", [FinalBestCandBirds]),
 				FinalBestCandBirds = element(2, lists:unzip(NewBestCandBirds)),
 				send_best_birds(lists:reverse(FinalBestCandBirds), AlivePCsNamesList),
 				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(AlivePCsNamesList),
 					bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
 			_Else ->
-%%				NewBestCandBirds = merge_birds(BestCandBirds, CandBirds),      % merge the sorted birds received from PC with current birds
 				State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1, bestCandBirds=NewBestCandBirds}
 		end,
 	{noreply, NewState};
@@ -174,8 +171,8 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 	case WaitForPCsAmount of
 		1 ->
 			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
-			cast_all_PCs2(AlivePCsNamesList, {start_simulation}),
-			cast_all_PCs2(AlivePCsNamesList, {simulate_frame}),
+			cast_all_PCs(AlivePCsNamesList, {start_simulation}),
+			cast_all_PCs(AlivePCsNamesList, {simulate_frame}),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=trunc(length(AlivePCsNamesList)*(?NUM_OF_BIRDS/?INIT_PC_AMOUNT)),
 										   birdsPerPcMap=NewBirdsPerPcMap, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
 		
@@ -200,7 +197,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:layout(MainSizer),
 %%			gen_server:cast(hd(PC_List), {start_bird_FSM, play_NEAT, SpikesList}),
-			cast_all_PCs2(AlivePCsNamesList, {start_bird_FSM, play_NEAT, SpikesList}),
+			cast_all_PCs(AlivePCsNamesList, {start_bird_FSM, play_NEAT, SpikesList}),
 			State#graphics_state{score=0, bestScore=0};
 		
 		?ButtonJumpID ->
@@ -225,7 +222,7 @@ handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
 	{noreply, NewState}.
 
 %% =================================================================
-%% We reach here each timer event
+%% We reach here each timer event (moves between frames).
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
 										 locatedBirdsAmount=LocatedBirdsAmount, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
 										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, birdsPerPcMap=BirdsPerPcMap,
@@ -272,12 +269,12 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 					_ ->
 						case LocatedBirdsAmount >= NumOfAliveBirds of   % all birds sent their location.
 							true  ->
-								cast_all_PCs2(NewAlivePCsNamesList, {simulate_frame}),
+								cast_all_PCs(NewAlivePCsNamesList, {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 								case Has_changed_dir of
 									true  ->
 										NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
-										cast_all_PCs2(NewAlivePCsNamesList, {spikes_list, NewSpikesList}),
+										cast_all_PCs(NewAlivePCsNamesList, {spikes_list, NewSpikesList}),
 										NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
 										NewScore = Score + 1;
 									
@@ -287,7 +284,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 										NewScore = Score
 								end,
 								State#graphics_state{birdList=sets:new(), locatedBirdsAmount=0, bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
-													% TODO delete?
+
 							false ->   % wait for some birds to send their location.
 								State
 						end
@@ -303,6 +300,7 @@ handle_info(#wx{event=#wxClose{}}, State) ->
 	{stop, normal, State}.
 
 %% =================================================================
+%% This function draws on the screen every frame.
 handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikesList=SpikesList, panel=Panel, brush=Brush,
 													bitmapBird_R=BitmapBird_R, bitmapBird_L=BitmapBird_L, birdUser=#bird{y=Y},
 													bird_x=X, bird_direction=Direction, birdList=BirdList, score=Score, bestScore=BestScore,
@@ -318,17 +316,18 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 	case CurrState of
 		idle ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel),
+			wxStaticText:setLabel(TxtBirdsPerPC, ""),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_user ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel),
+			wxStaticText:setLabel(TxtBirdsPerPC, ""),
 			wxDC:drawBitmap(DC, BitmapBird, {X, Y});
 		
 		play_NEAT_simulation ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
 			wxStaticText:setLabel(TxtBirdsPerPC, io_lib:format("~p", [BirdsPerPcMap])),
 			List = sets:to_list(BirdList),
-%%			io:format("list of birds ~p~n", [List]),
 			draw_birds(DC, BitmapBird, X, List);
 		
 		play_NEAT_population ->
@@ -344,6 +343,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 	draw_wall_spikes(DC, SpikesList, ?SPIKES_TOP_Y, Direction),
 	
 	wxPaintDC:destroy(DC);
+	
 handle_sync_event(_Event, _, State) ->
 	{noreply, State}.
 %%
@@ -359,7 +359,7 @@ check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=R
 			NewAlivePCsNamesList = RecvACKsPCsNamesList,
 			NewRecvACKsPCsNamesList = [],
 			{NewBirdsPerPcMap, NewWaitForPCsAmount} = update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList, WaitForPCsAmount),
-			cast_all_PCs2(NewAlivePCsNamesList, {are_you_alive});
+			cast_all_PCs(NewAlivePCsNamesList, {are_you_alive});
 		
 		false ->
 			NewTimeCount = TimeCount + ?TIMER,
@@ -372,6 +372,7 @@ check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=R
 	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap, NewWaitForPCsAmount}.
 
 
+%% Gets a lists of the PCs that just died and removes them from the map with the amount of alive birds per PC.
 update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList, WaitForPCsAmount) ->
 	case AlivePCsNamesList -- RecvACKsPCsNamesList of
 		[] -> {BirdsPerPcMap, WaitForPCsAmount}; % no new dead PC
@@ -428,7 +429,7 @@ draw_wall_spikes(DC, [IsSpike|SpikesList_Tail], CurrSpike_Y, Direction) ->
 			end;
 		0 -> no_spike
 	end,
-	draw_wall_spikes(DC, SpikesList_Tail, CurrSpike_Y+?SPIKE_WIDTH+?SPIKE_GAP_Y, Direction).
+	draw_wall_spikes(DC, SpikesList_Tail, CurrSpike_Y + ?SPIKE_WIDTH + ?SPIKE_GAP_Y, Direction).
 
 
 draw_top_bottom_spikes(_, _, 0) -> ok;
@@ -438,21 +439,6 @@ draw_top_bottom_spikes(DC, CurrSpike_X, Spikes_amount) ->
 	wxDC:drawPolygon(DC, [{CurrSpike_X, ?TOP_RECT_HEIGHT}, {Center_of_spike, ?TOP_RECT_HEIGHT+?SPIKE_HEIGHT}, {End_of_spike_X, ?TOP_RECT_HEIGHT}]),
 	wxDC:drawPolygon(DC, [{CurrSpike_X, ?BOTTOM_RECT_Y}, {Center_of_spike, ?BOTTOM_RECT_Y-?SPIKE_HEIGHT}, {End_of_spike_X, ?BOTTOM_RECT_Y}]),
 	draw_top_bottom_spikes(DC, End_of_spike_X+?SPIKE_GAP_X, Spikes_amount-1).
-
-
-%% Merge CandBirds with BestCandBirds and return ?100? best birds. A bird performs better when it stays alive for more frames.
-%%merge_birds([], CandBirds) -> CandBirds;
-%%merge_birds(BestCandBirds, CandBirds) ->
-%%	merge_birds(BestCandBirds, CandBirds, [], ?NUM_OF_SURVIVED_BIRDS).     % we only choose ceil(0.1*N) of all birds
-%%
-%%merge_birds(_, _, BestCandBirds, 0) -> BestCandBirds;
-%%merge_birds([Bird1|CandBirds1], [Bird2|CandBirds2], BestCandBirds, BirdsToChoose) ->
-%%	{FrameCount1, _WeightsList1} = Bird1,
-%%	{FrameCount2, _WeightsList2} = Bird2,
-%%	case FrameCount1 < FrameCount2 of
-%%		true  -> merge_birds([Bird1|CandBirds1], CandBirds2, BestCandBirds ++ [Bird2], BirdsToChoose-1);
-%%		false -> merge_birds(CandBirds1, [Bird2|CandBirds2], BestCandBirds ++ [Bird1], BirdsToChoose-1)
-%%	end.
 
 
 %% Notify all PCs about their best birds. A bird performs better when it stays alive for more frames.
@@ -468,35 +454,24 @@ send_best_birds(BestCandBirds, [PC_Name|PC_NamesT]) ->
 %% =================================================================
 init_system() ->
 	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), ?INIT_SPIKE_LIST, idle),    % the graphics owns the user bird
-	init_PCs2(?PC_NODES, ?PC_NAMES),
+	init_PCs(?PC_NODES, ?PC_NAMES),
 	{BirdUserPID}.
 
-init_PCs2([], []) -> finish;
-init_PCs2([PC_Node|PC_NodesT], [PC_Name|PC_NamesT]) ->
+init_PCs([], []) -> finish;
+init_PCs([PC_Node|PC_NodesT], [PC_Name|PC_NamesT]) ->
 	rpc:call(PC_Node, pc_bird_server, start, [PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)]),
-	init_PCs2(PC_NodesT, PC_NamesT).
-
-%%init_PCs(?INIT_PC_AMOUNT, PcPIDs) -> PcPIDs;
-%%init_PCs(Amount, PcPIDs) ->
-%%	PC_Name = list_to_atom("pc" ++ integer_to_list(Amount) ++ "_" ++ integer_to_list(erlang:unique_integer())),
-%%	{ok, PcPID} = pc_bird_server:start(PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)),	% init pc bird server
-%%	init_PCs(Amount+1, PcPIDs ++ [PcPID]).
+	init_PCs(PC_NodesT, PC_NamesT).
 
 
-% build a new & unique bird FSM
+%% build a new & unique bird FSM
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
 
-cast_all_PCs2([], _Msg) -> finish;
-cast_all_PCs2([PC_Name|PC_NamesT], Msg) ->
+%% Casts the message Msg to all PCs
+cast_all_PCs([], _Msg) -> finish;
+cast_all_PCs([PC_Name|PC_NamesT], Msg) ->
 	rpc:call(?PC_NAME_TO_NODE(PC_Name), pc_bird_server, pc_rpc, [PC_Name, Msg]),
-	cast_all_PCs2(PC_NamesT, Msg).
-%%
-%%
-%%cast_all_PCs([], _Msg) -> finish;
-%%cast_all_PCs([PcPID|PcListT], Msg) ->
-%%	gen_server:cast(PcPID, Msg),
-%%	cast_all_PCs(PcListT, Msg).
+	cast_all_PCs(PC_NamesT, Msg).
 
 
 %% Receive rpc from PC
@@ -508,7 +483,7 @@ graphics_rpc(Msg)->
 %% Example of playing a sound from a file: os:cmd("aplay sounds/lose.wav")
 sound() ->
 	receive
-		SoundName -> os:cmd("aplay sounds/" ++ SoundName ++ ".wav")%SoundName%
+		SoundName -> os:cmd("aplay sounds/" ++ SoundName ++ ".wav")
 	end,
 	sound().
 

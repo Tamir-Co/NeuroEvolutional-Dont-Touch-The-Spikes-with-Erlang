@@ -87,21 +87,22 @@ rand_neuron_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, PrevLayer
 	rand_neuron_weights(N_PIDsLayersMap, NewWeightsMap, LayerIdx, NeuronsIdx, PrevLayerNeuronsIdx-1, Idx+1).
 
 
+%% Gets an index of an edge and returning a random weight
 random_weight(Idx) ->
-	case Idx =< hd(?NN_STRUCTURE) * 2 of    % ?12? first neurons (input neurons)
-		true -> 1;
-		false ->
+	case Idx =< hd(?NN_STRUCTURE) * 2 of    % check if the Idx-th edge belongs to the first layer (input neuron)
+		true -> 1;							% don't change the weight of an input
+		false ->							% change the weight of an edge randomly
 			case rand:uniform(?MUTATION_MAX_RAND_VAL) of
-				1 -> 0;                     % weight=0
+				1 -> 0;                     % resets the weight to 0
 				_ -> rand:uniform() - 0.5   % random new weight
 			end
 	end.
 
-
+%% Gets an index of an edge and returning a random bias
 rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->
-	case Idx =< hd(?NN_STRUCTURE) * 2 of    % ?12? first neurons (input neurons)
+	case Idx =< hd(?NN_STRUCTURE) * 2 of    % check if the Idx-th edge belongs to the first layer (input neuron)
 		true  -> Bias = 0;
-		false -> Bias = (rand:uniform() - 0.5) * 50    % [-0.5,0.5) * 50
+		false -> Bias = (rand:uniform() - 0.5) * ?BIAS_RANGE    % [-0.5,0.5) * 50
 	end,
 	NeuronPID = lists:nth(NeuronsIdx, maps:get({layer, LayerIdx}, N_PIDsLayersMap)),
 	WeightsMap#{ {Idx, bias, NeuronPID} => Bias }.   % add bias to the NN map

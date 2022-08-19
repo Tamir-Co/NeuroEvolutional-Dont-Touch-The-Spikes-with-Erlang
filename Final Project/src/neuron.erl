@@ -35,10 +35,6 @@ loop(_NeuronData = #neuron_data{acc=Acc, weights=Weights, bias=Bias, activation=
 				loop(#neuron_data{acc=0, weights=NewWeights, bias=NewBias, activation=NewActivation, origInPIDs=NewInPIDs, remInPIDs=length(NewInPIDs), outPIDs=NewOutPIDs});
 		
 		{neuron, From, A} ->
-%%				case lists:member(From, RemInPIDs) of		% is the sender legal
-%%					true  -> ok;
-%%					false -> exit("illegal neuron sender!!!")
-%%				end,
 				W = maps:get(From, Weights),		% get the relevant input weight
 				Z = Acc + W*A,
 				case RemInPIDs > 1 of		% check if the neuron hasn't received all its inputs yet
@@ -59,7 +55,7 @@ activation_func(identity, Z) -> Z;
 activation_func(relu, Z) -> case 0 < Z of
 								true  -> Z;
 								false -> 0
-                            end;
+							end;
 
 activation_func(sign, 0)-> 0;
 activation_func(sign, Z)->
