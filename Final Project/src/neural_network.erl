@@ -20,12 +20,14 @@ init(NetworkStructure, BirdPID) ->
 	configure_NN(WeightsMap, N_PIDsList, 1),
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList, birdPID=BirdPID}).
 
+
+%% This is the main loop. this module acts according to actions it gets as messages.
 loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, spikesList=SpikesList, n_PIDsList=N_PIDsList, birdPID=BirdPID}) ->
 	receive
 		{decide_jump, BirdHeight, BirdWallDistance} ->
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
 					true  -> gen_statem:cast(BirdPID, {jump}); % bird jump
-%%					true  -> BirdPID ! {jump, FrameCount}; % bird jump
+%%					true  -> BirdPID ! {jump, FrameCount}; % bird jump TODO delete
 					false -> ok                           % bird doesn't jump
 				end,
 				loop(NN_Data);
