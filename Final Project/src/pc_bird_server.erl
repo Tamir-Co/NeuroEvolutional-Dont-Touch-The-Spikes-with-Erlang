@@ -36,9 +36,9 @@ init([PC_Name, NumOfPcBirds]) ->
 %% Build a new & unique bird FSM name
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
-
-% handle_call(_Request, _From, _State) ->  TODO delete
-	% erlang:error(not_implemented).
+% TODO delete?
+handle_call(_Request, _From, _State) ->
+	erlang:error(not_implemented).
 
 
 %% A message from the graphics (the main node) in order to check if this PC is still alive and connected.
@@ -99,11 +99,12 @@ handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMa
 	{noreply, State#pc_bird_server_state{}}.
 
 
+%% Receive rpc from graphics
 pc_rpc(Pc, Msg)->
 	gen_server:cast(Pc, Msg).
 
 %% =================================================================
-%% Start all bird FSMs and return the new bird list
+%% Start all bird FSMs and return a new bird map
 start_bird_FSM(0, _PC_Name, _SpikesList, BirdsMap, _GraphicState) -> BirdsMap;
 start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState) ->
 	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList, GraphicState),
@@ -121,7 +122,7 @@ msg_to_birds([Bird|Bird_T], Msg, IsMsg) ->
 
 
 %% Receive Bird PID list and weights map list.
-%% Mutate each weight list 9 times and keep 1 copy, then send it to the birds
+%% Mutate each weight list ?9? times and keep 1 copy, then send it to the birds
 create_mutations_and_send([], []) -> finish;
 create_mutations_and_send(BirdsListPID, [Brain|BrainT]) ->
 	RemainingPIDs = mutate_brain_and_send(BirdsListPID, Brain, trunc(1/?PERCENT_SURVIVED_BIRDS) - 1),  % mutate the "brain" ?9? times
