@@ -144,7 +144,7 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_us
 	sound_proc ! "lose_trim",
 	NewState = State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT},
 	{noreply, NewState};
-%%
+%% TODO delete
 %%handle_cast({brain, Brain}, State=#graphics_state{brainList=BrainList, genNum=GN, bestPreviousBrain=BestPreviousBrain})->
 %%	NewBrainList = BrainList ++ [Brain],
 %%	case length(NewBrainList) of
@@ -212,6 +212,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 			sound_proc ! "jump_trim",
 			gen_statem:cast(BirdUserPID, {jump}),
 			State;
+			
 		_ ->
 			State
 	end,
@@ -350,9 +351,6 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 	
 handle_sync_event(_Event, _, State) ->
 	{noreply, State}.
-%%
-%%terminate(_Reason, State = #graphics_state{}) ->
-%%	wxFrame:destroy(State#graphics_state.frame).
 
 %% =================================================================
 %% check if timeout occurred
@@ -388,10 +386,10 @@ update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList, Wai
 %% the output is: {NewDirection, NewX, Has_changed_direction}
 simulate_x_movement(X, Direction) ->
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{r, _    , true } -> {l        , X - ?X_VELOCITY, true };
-		{r, _    , false} -> {Direction, X + ?X_VELOCITY, false};
-		{l, true , _    } -> {r        , X + ?X_VELOCITY, true };
-		{l, false, _    } -> {Direction, X - ?X_VELOCITY, false}
+		{r, _    , true } -> {l        , X - ?X_VELOCITY, true };	% If the bird is moving to the right and     touching the right wall.
+		{r, _    , false} -> {Direction, X + ?X_VELOCITY, false};	% If the bird is moving to the right and not touching the right wall.
+		{l, true , _    } -> {r        , X + ?X_VELOCITY, true };	% If the bird is moving to the left  and     touching the left  wall.
+		{l, false, _    } -> {Direction, X - ?X_VELOCITY, false} 	% If the bird is moving to the left  and not touching the left  wall.
 	end.
 
 

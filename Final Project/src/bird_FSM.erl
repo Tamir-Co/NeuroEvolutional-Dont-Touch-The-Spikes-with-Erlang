@@ -47,12 +47,11 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 		play_NEAT ->
 			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}}
 	end;
-	
+
 %% A message from the PC with new brain/genes. Then, the neural network is set accordingly.
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->
 	NN_PID ! {set_weights, NewBrain},
 	{keep_state, Bird};
-
 
 %% A message from the neural_network with the current weight list (current brain).
 %% This is the response to the message {get_weights} which is sent to the neural_network when this bird dies.
@@ -61,11 +60,11 @@ idle(info, {weights_list, WeightsList}, Bird=#bird{pcPID=PC_PID, frameCount=Fram
 	{keep_state, Bird};
 
 % TODO delete:
-%idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore
+%idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore this message
 %	{keep_state, Bird};
-%idle(cast, {jump}, Bird) -> % ignore
+%idle(cast, {jump}, Bird) -> % ignore this message
 %	{keep_state, Bird};
-%idle(cast, {simulate_frame}, Bird) -> % ignore
+%idle(cast, {simulate_frame}, Bird) -> % ignore this message
 %	{keep_state, Bird}.
 
 %% ================================================================== simulation:
@@ -173,7 +172,7 @@ jump(Bird=#bird{}) ->
 	Bird#bird{velocityY=-?JUMP_VELOCITY}.
 
 
-%% This finction simulate the next frame of the bird. Returns: {IsDead, NewBird}
+%% This function simulates the next frame of the bird. Returns: {IsDead, NewBird}
 simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}, SpikesList) ->
 	%% update direction and X value
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
