@@ -150,7 +150,7 @@
 
 -record(pc_bird_server_state, {
 	pcName,
-	graphicState = idle,
+	% graphicState = idle, TODO delete
 	numOfPcBirds,       % amount of PC birds ?250?
 	numOfAliveBirds,    % amount of birds in simulation right now
 	listOfAliveBirds,   % list of PIDs of current alive (in simulation) birds

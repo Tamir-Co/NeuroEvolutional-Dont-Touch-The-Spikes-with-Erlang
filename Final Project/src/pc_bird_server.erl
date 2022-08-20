@@ -37,7 +37,7 @@ init([PC_Name, NumOfPcBirds]) ->
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
 
-% handle_call(_Request, _From, _State) ->
+% handle_call(_Request, _From, _State) ->  TODO delete
 	% erlang:error(not_implemented).
 
 
@@ -51,7 +51,7 @@ handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_st
 	io:format("Number of birds per PC: ~p~n", [NumOfPcBirds]),
 	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState),
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{finish_init_birds, self(), GraphicState}]),	% tell graphics the PC finished to start_bird_FSMs
-	{noreply, State#pc_bird_server_state{graphicState=GraphicState, birdsMap=NewBirdsMap}};
+	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap}}; % TODO delete this: graphicState=GraphicState, 
 
 %% A message from the graphics (the main node) in order to start the simulation state. The pc sends this message to all birds.
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
