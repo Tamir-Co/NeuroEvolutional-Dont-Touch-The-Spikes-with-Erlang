@@ -49,7 +49,7 @@ Then move to the Run instructions.
 Change the configuration in src/constants.hrl to:
 
 ```erlang
--define(GRAPHICS_NODE, 'pc1@[enter pc0 ip]').
+-define(GRAPHICS_NODE, 'pc0@[enter pc0 ip]').
 -define(PC1_NODE,      'pc1@[enter pc1 ip]').
 -define(PC2_NODE,      'pc2@[enter pc2 ip]').
 -define(PC3_NODE,      'pc3@[enter pc3 ip]').
