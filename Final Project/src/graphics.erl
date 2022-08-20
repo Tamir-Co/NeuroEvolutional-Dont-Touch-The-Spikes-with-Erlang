@@ -105,11 +105,13 @@ init(_Args) ->
 	}}.
 
 %% =================================================================
+
+%% A message from a PC that represents this PC is still alive and connected.
 handle_cast({im_alive, PC_Name}, State=#graphics_state{recvACKsPCsNamesList=RecvACKsPCsNamesList})->
 	io:format("~p is alive!~n", [PC_Name]),
-	NewRecvACKsPCsNamesList = RecvACKsPCsNamesList ++ [PC_Name],
-	{noreply, State#graphics_state{recvACKsPCsNamesList=NewRecvACKsPCsNamesList}};
-	
+	{noreply, State#graphics_state{recvACKsPCsNamesList = RecvACKsPCsNamesList ++ [PC_Name]}};
+
+%% A message from a PC when it finished 'start_bird_FSM' (in play_NEAT mode)
 handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{waitForPCsAmount=WaitForPCsAmount, alivePCsNamesList=AlivePCsNamesList})->
 	case WaitForPCsAmount of
 		1 ->
@@ -123,17 +125,21 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
 	end;
 
+%% A message from a PC of one of its birds with his new Y location when he finish simulate_frame (in play_NEAT mode)
 handle_cast({neat_bird_location, Y}, State=#graphics_state{curr_state=play_NEAT_simulation, locatedBirdsAmount=LocatedBirdsAmount, birdList=BirdList})->
 	NewState = State#graphics_state{birdList=sets:add_element(Y, BirdList), locatedBirdsAmount=LocatedBirdsAmount+1},
 	{noreply, NewState};
 
+%% A message from a bird with his new Y location when he finish simulate_frame (in play_user mode)
 handle_cast({user_bird_location, Y}, State)->
 	{noreply, State#graphics_state{birdUser=#bird{y=Y}}};
 
+%% A message from a PC that represents that one of its bird died (in play_NEAT mode)
 handle_cast({neat_bird_disqualified, PC_Name}, State=#graphics_state{curr_state=play_NEAT_simulation, numOfAliveBirds=NumOfAliveBirds, birdsPerPcMap=BirdsPerPcMap})->
 	NewBirdsPerPcMap = BirdsPerPcMap#{ PC_Name := maps:get(PC_Name, BirdsPerPcMap) - 1 },
 	{noreply, State#graphics_state{numOfAliveBirds=NumOfAliveBirds-1, birdsPerPcMap=NewBirdsPerPcMap}};
 
+%% A message from a bird when it dies (in play_user mode)
 handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_user})->
 	sound_proc ! "lose_trim",
 	NewState = State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT},
@@ -149,8 +155,10 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_us
 %%			NewNewBrainList = NewBrainList
 %%	end,
 %%	{noreply, State#graphics_state{brainList=NewNewBrainList}};
-
 %% CandBirds = [{FrameCount1, WeightsList1}, {FrameCount2, WeightsList2}]
+
+
+%% A message from a PC that represents that he finished the simulation. If all PCs finished, the graphics changes to play_NEAT_population state.
 handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
 	SortedBirds = lists:keysort(1, BestCandBirds ++ CandBirds),             % all birds are dead now, send them sorted (by frame count) to graphics
 	{_, NewBestCandBirds} = lists:split(length(SortedBirds) - ?NUM_OF_SURVIVED_BIRDS, SortedBirds),      % take only the ?100? best birds
@@ -167,6 +175,7 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 		end,
 	{noreply, NewState};
 
+%% A message from a PC that represents that he finished the population. If all PCs finished, the graphics changes to play_NEAT_simulation state.
 handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, genNum=GenNum, score=Score, bestScore=BestScore})->
 	case WaitForPCsAmount of
 		1 ->
@@ -181,48 +190,43 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 	end.
 
 %% =================================================================
-%% We reach here each button press
-handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
+%% We reach here each button click
+handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#graphics_state{curr_state=CurrState, mainSizer=MainSizer, uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, 
 																							  bird_x=_Bird_x, bird_direction=_Bird_dir, alivePCsNamesList=AlivePCsNamesList,
 																							  spikesList=SpikesList, score=Score, bestScore=BestScore, birdUserPID=BirdUserPID}) ->
-	NewState = case ID of
-		?ButtonStartUserID ->
+	NewState = case {CurrState, ID} of
+		{idle, ?ButtonStartUserID} ->
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:show(UiSizer, JumpSizer, []),
 			wxSizer:layout(MainSizer),
 			BirdUserPID ! {start_simulation},
 			State#graphics_state{score=0, bestScore=max(BestScore, Score), curr_state=play_user};
 		
-		?ButtonStartNEATID ->
+		{idle, ?ButtonStartNEATID} ->
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:layout(MainSizer),
-%%			gen_server:cast(hd(PC_List), {start_bird_FSM, play_NEAT, SpikesList}),
 			cast_all_PCs(AlivePCsNamesList, {start_bird_FSM, play_NEAT, SpikesList}),
 			State#graphics_state{score=0, bestScore=0};
 		
-		?ButtonJumpID ->
+		{play_user, ?ButtonJumpID} ->
 			sound_proc ! "jump_trim",
 			gen_statem:cast(BirdUserPID, {jump}),
+			State;
+		_ ->
 			State
 	end,
 	{noreply, NewState};
 
-% closing window event
-handle_event(#wx{event = #wxClose{}},State = #graphics_state {frame = Frame}) -> % close window event
+%% closing window event
+handle_event(#wx{event = #wxClose{}}, State = #graphics_state{frame = Frame}) -> % close window event
 	io:format("Exiting\n"),
 	wxWindow:destroy(Frame),
 	wx:destroy(),
 	unregister(sound_proc),
-	{stop,normal,State};
-
-%% We reach here each key_down event
-handle_event(#wx{id=_ID, event=#wxCommand{type=Type}}, State) ->
-	io:format("~n~nevent key down: ~p~n", [Type]),
-	NewState = State,
-	{noreply, NewState}.
+	{stop, normal, State}.
 
 %% =================================================================
-%% We reach here each timer event (moves between frames).
+%% We reach here each timer event. This function moves to the next frame.
 handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer, jumpSizer=JumpSizer, mainSizer=MainSizer, frame=Frame,
 										 locatedBirdsAmount=LocatedBirdsAmount, birdUserPID=BirdUserPID, bird_x=Bird_x, bird_direction=Bird_dir,
 										 spikesList=SpikesList, curr_state=CurrState, score=Score, spikesAmount=SpikesAmount, birdsPerPcMap=BirdsPerPcMap,

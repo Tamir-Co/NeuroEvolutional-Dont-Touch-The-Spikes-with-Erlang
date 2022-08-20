@@ -41,7 +41,7 @@ create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Nam
 	% erlang:error(not_implemented).
 
 
-%% A message from the graphics (the main node) in order to check if this pc is still alive and connected.
+%% A message from the graphics (the main node) in order to check if this PC is still alive and connected.
 handle_cast({are_you_alive}, State=#pc_bird_server_state{pcName=PC_Name})->
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{im_alive, PC_Name}]), % send alive message to PC
 	{noreply, State};
