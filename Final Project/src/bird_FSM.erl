@@ -51,15 +51,15 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 %% A message from the PC with new brain/genes. Then, the neural network is set accordingly.
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->
 	NN_PID ! {set_weights, NewBrain},
-	{keep_state, Bird}.
+	{keep_state, Bird};
 
-% TODO delete:
-%idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore this message
-%	{keep_state, Bird};
-%idle(cast, {jump}, Bird) -> % ignore this message
-%	{keep_state, Bird};
-%idle(cast, {simulate_frame}, Bird) -> % ignore this message
-%	{keep_state, Bird}.
+%% Ignore this messages
+idle(cast, {spikes_list, _SpikesList}, Bird) ->
+	{keep_state, Bird};
+idle(cast, {jump}, Bird) ->
+	{keep_state, Bird};
+idle(cast, {simulate_frame}, Bird) ->
+	{keep_state, Bird}.
 
 %% ================================================================== simulation:
 
