@@ -10,7 +10,7 @@ sodu apt-get install erlang
 ```
 
 ## Usage
-You should open consoles inside the src folder.
+You should open your consoles inside the src folder.
 There are multiple ways you can run the program:
 
 ### 1 console in 1 computer
@@ -22,7 +22,7 @@ Change the configuration in src/constants.hrl to:
 -define(PC3_NODE,      'pc0@[enter pc0 hostname]').
 -define(PC4_NODE,      'pc0@[enter pc0 hostname]').
 ```
-Then from a bash terminal run the following command:
+Then from a bash terminal, go to the src directory, and run the following command:
 ```bash
 erl -sname 'pc0' -setcookie yummy
 ```
@@ -37,7 +37,7 @@ Change the configuration in src/constants.hrl to:
 -define(PC3_NODE,      'pc3@[enter pc0 hostname]').
 -define(PC4_NODE,      'pc4@[enter pc0 hostname]').
 ```
-Then in each bash terminal go to the src directory and run the following command:
+Then in each bash terminal, go to the src directory, and run the following command:
 ```bash
 erl -sname 'pc[x]' -setcookie yummy
 ```
@@ -56,7 +56,7 @@ Change the configuration in src/constants.hrl to:
 -define(PC4_NODE,      'pc4@[enter pc4 IP]').
 ```
 
-Then in each bash terminal run the following command:
+Then in each bash terminal, go to the src directory, and run the following command:
 ```bash
 erl -name 'pc[x]@[pc IP address]' -setcookie yummy
 ```
@@ -69,7 +69,7 @@ To run the code in each of your open consoles run the following command:
 ```erlang
 cover:compile_directory().
 ```
-to compile the code.
+To compile the code.
 
 Then only in the console of pc0, run the following command:
 ```erlang
