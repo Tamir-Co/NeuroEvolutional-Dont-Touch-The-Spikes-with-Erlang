@@ -70,7 +70,7 @@ init(_Args) ->
 	BitmapBird_L = wxBitmap:new(wxImage:scale(ImageBird_L, ?BIRD_WIDTH, ?BIRD_HEIGHT, [])),
 
 	wxFrame:show(Frame),
-	erlang:send_after(?TIMER, self(), timer),
+	erlang:send_after(?TIMER_NEAT, self(), timer),	% set new timer
 
 	wxPanel:connect(Panel, paint, [callback]),
 	wxFrame:connect(Frame, close_window),
@@ -242,6 +242,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				wxSizer:hide(UiSizer, JumpSizer, []),
 				wxSizer:show(UiSizer, StartSizer, []),
 				wxSizer:layout(MainSizer),
+				erlang:send_after(?TIMER_NEAT, self(), timer),	% set new timer
 				State#graphics_state{birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT, spikesList=?INIT_SPIKE_LIST};
 		
 			play_user ->
@@ -260,9 +261,11 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 						NewSpikesAmount = SpikesAmount,
 						NewScore = Score
 				end,
+				erlang:send_after(?TIMER_USER, self(), timer),	% set new timer
 				State#graphics_state{bird_x=NewX, bird_direction=NewDirection, spikesList=NewSpikesList, score=NewScore, spikesAmount=NewSpikesAmount};
 				
 			play_NEAT_simulation ->
+				erlang:send_after(?TIMER_NEAT, self(), timer),	% set new timer
 				NumOfAliveBirds = maps:fold(fun(_, NumBirds, Acc) -> Acc + NumBirds end, 0, BirdsPerPcMap),
 				case NumOfAliveBirds of
 					0 ->    % go to population when last PC died
@@ -295,10 +298,11 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 						end
 				end;
 			
-			play_NEAT_population -> State
+			play_NEAT_population ->
+				erlang:send_after(?TIMER_NEAT, self(), timer),	% set new timer
+				State
 		end,
 
-	erlang:send_after(?TIMER, self(), timer),	% set new timer
 	{noreply, NewState#graphics_state{timeCount=NewTimeCount, recvACKsPCsNamesList=NewRecvACKsPCsNamesList, alivePCsNamesList=NewAlivePCsNamesList, birdsPerPcMap=NewBirdsPerPcMap, waitForPCsAmount=NewWaitForPCsAmount}};
 
 handle_info(#wx{event=#wxClose{}}, State) ->
@@ -357,6 +361,7 @@ handle_sync_event(_Event, _, State) ->
 check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=RecvACKsPCsNamesList, alivePCsNamesList=AlivePCsNamesList, birdsPerPcMap=BirdsPerPcMap, waitForPCsAmount=WaitForPCsAmount}) ->
 	case TimeCount >= ?TIMEOUT of
 		true ->     % timeout passed
+			?PRINT(),
 			NewTimeCount = 0,
 			NewAlivePCsNamesList = RecvACKsPCsNamesList,
 			NewRecvACKsPCsNamesList = [],
@@ -364,13 +369,12 @@ check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=R
 			cast_all_PCs(NewAlivePCsNamesList, {are_you_alive});
 		
 		false ->
-			NewTimeCount = TimeCount + ?TIMER,
+			NewTimeCount = TimeCount + ?TIMER_NEAT,
 			NewAlivePCsNamesList = AlivePCsNamesList,
 			NewRecvACKsPCsNamesList = RecvACKsPCsNamesList,
 			NewBirdsPerPcMap = BirdsPerPcMap,
 			NewWaitForPCsAmount = WaitForPCsAmount
 		end,
-
 	{NewTimeCount, NewAlivePCsNamesList, NewRecvACKsPCsNamesList, NewBirdsPerPcMap, NewWaitForPCsAmount}.
 
 

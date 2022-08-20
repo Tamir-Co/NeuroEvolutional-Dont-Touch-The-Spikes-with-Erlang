@@ -3,7 +3,7 @@
 
 
 ## Installation
-We are using erlang version OTP 25.03 on ubuntu 20.04.
+We are using erlang version OTP 25 on ubuntu 20.04.
 Use the package manager to install erlang:
 ```bash
 sodu apt-get install erlang

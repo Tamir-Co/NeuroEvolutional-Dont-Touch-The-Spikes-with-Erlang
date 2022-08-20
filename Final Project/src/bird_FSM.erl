@@ -57,7 +57,7 @@ idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->
 %% This is the response to the message {get_weights} which is sent to the neural_network when this bird dies.
 idle(info, {weights_list, WeightsList}, Bird=#bird{pcPID=PC_PID, frameCount=FrameCount}) ->
 	gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC with the current frame count and weights list
-	{keep_state, Bird};
+	{keep_state, Bird}.
 
 % TODO delete:
 %idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore this message

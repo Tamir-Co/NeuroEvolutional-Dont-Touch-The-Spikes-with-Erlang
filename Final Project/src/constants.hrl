@@ -15,11 +15,11 @@
 %-define(PC2_NODE,       'pc2@tamir').
 %-define(PC3_NODE,       'pc3@tamir').
 %-define(PC4_NODE,       'pc4@tamir').
--define(GRAPHICS_NODE,  'pc0@nadavhd-VirtualBox').
--define(PC1_NODE,       'pc1@nadavhd-VirtualBox').
--define(PC2_NODE,       'pc2@nadavhd-VirtualBox').
--define(PC3_NODE,       'pc3@nadavhd-VirtualBox').
--define(PC4_NODE,       'pc4@nadavhd-VirtualBox').
+-define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
+-define(PC1_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC2_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC3_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC4_NODE,       'pc0@Nadav-VirtualBox').
 -define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
 
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).
@@ -87,7 +87,7 @@
 
 
 %% Neural network:
--define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).		% This is the structure of the network. The first and last number from the list are the in/outputs layers.
+-define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 10, 6, 6, 1]).		% This is the structure of the network. The first and last number from the list are the in/outputs layers.
 
 -define(BIAS_RANGE, 50).				% used in division of the range [-0.5,0.5] to a smaller range
 % -define(MUTATION_WEIGHT_FACTOR, 20).	% used in division of the range [-0.5,0.5] to a smaller range
@@ -106,7 +106,8 @@
 
 
 %% Time:
--define(TIMER, 100).		% Graphics update timer
+-define(TIMER_NEAT, 80).    % Graphics update timer
+-define(TIMER_USER, 60).    % Graphics update timer
 -define(TIMEOUT, 500).		% for ACKs
 -define(TIME_UNIT, 1).
 
