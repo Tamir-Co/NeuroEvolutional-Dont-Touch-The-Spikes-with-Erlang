@@ -65,7 +65,7 @@ Where [x] is indexed between 0-4 and [pc IP address] is the IP of the computer w
 Then move to the Run instructions.
 
 ## Run
-To run the code in each of your open consoles run the following command:
+To run the code in each of your open consoles, run the following command:
 ```erlang
 cover:compile_directory().
 ```
