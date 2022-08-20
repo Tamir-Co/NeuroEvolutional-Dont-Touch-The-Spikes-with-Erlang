@@ -274,7 +274,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 					0 ->    % go to population when last PC died
 						FinalBestCandBirds = element(2, lists:unzip(BestCandBirds)),
 						send_best_birds(lists:reverse(FinalBestCandBirds), NewAlivePCsNamesList),
-						State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(NewAlivePCsNamesList),
+						State#graphics_state{curr_state=play_NEAT_population, locatedBirdsAmount=0, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(NewAlivePCsNamesList),
 						bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 					
 					_ ->
