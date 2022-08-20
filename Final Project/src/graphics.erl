@@ -463,7 +463,7 @@ init_PCs([PC_Node|PC_NodesT], [PC_Name|PC_NamesT]) ->
 	init_PCs(PC_NodesT, PC_NamesT).
 
 
-%% build a new & unique bird FSM
+%% build a new & unique bird FSM name
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
 

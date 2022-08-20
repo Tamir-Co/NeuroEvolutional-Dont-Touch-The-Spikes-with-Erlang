@@ -36,7 +36,9 @@ init([PC_PID, SpikesList, GraphicState]) ->
 callback_mode() ->
 	state_functions.
 
-%% =================================================================
+%% ================================================================== idle:
+
+%% A message from the PC in order to start the simulation state.
 idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 	case GraphicState of
 		idle ->
@@ -45,11 +47,10 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 		play_NEAT ->
 			{next_state, simulation, Bird#bird{frameCount=0, spikesList=?INIT_SPIKE_LIST, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}}
 	end;
+	
+%% A message from the PC with new Brain/genes. Then, the neural network is set accordingly.
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->    % Replace the genes of the bird with other better genes
-%%	wx_object:cast(graphics, {brain, NewBrain}),
-%%	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{brain, NewBrain}]),
 	NN_PID ! {set_weights, NewBrain},
-%%	io:format("~ncast brain to graphics"),
 	{keep_state, Bird};
 
 
@@ -64,6 +65,7 @@ idle(cast, {jump}, Bird) -> % ignore
 idle(cast, {simulate_frame}, Bird) -> % ignore
 	{keep_state, Bird}.
 
+% =================================================================== simulation:
 
 simulation(cast, {spikes_list, SpikesList}, Bird=#bird{nnPID=NN_PID, graphicState=GraphicState}) ->
 	case GraphicState of
@@ -71,6 +73,8 @@ simulation(cast, {spikes_list, SpikesList}, Bird=#bird{nnPID=NN_PID, graphicStat
 		play_NEAT -> NN_PID ! {spikes_list, SpikesList}   % send spike list to NN
 	end,
 	{keep_state, Bird#bird{spikesList = SpikesList}};
+
+%
 simulation(cast, {jump}, Bird) ->
 	NextBird = jump(Bird),
 	{keep_state, NextBird};
@@ -162,10 +166,10 @@ jump(Bird=#bird{}) ->
 simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}, SpikesList) ->
 	%% update direction and X value
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
-		{r, _    , true } -> NewDirection = l        , NewX = X - ?X_VELOCITY;
-		{r, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;
-		{l, true , _    } -> NewDirection = r        , NewX = X + ?X_VELOCITY;
-		{l, false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY
+		{r, _    , true } -> NewDirection = l        , NewX = X - ?X_VELOCITY;	% If the bird is moving to the right and     touching the right wall.
+		{r, _    , false} -> NewDirection = Direction, NewX = X + ?X_VELOCITY;	% If the bird is moving to the right and not touching the right wall.
+		{l, true , _    } -> NewDirection = r        , NewX = X + ?X_VELOCITY;	% If the bird is moving to the left  and     touching the left  wall.
+		{l, false, _    } -> NewDirection = Direction, NewX = X - ?X_VELOCITY	% If the bird is moving to the left  and not touching the left  wall.
 	end,
 
 	%% check if the bird touching top/bottom spikes, or bird touching wall spikes (only when heading to the wall and near it)
@@ -174,6 +178,7 @@ simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Dir
 	{IsDead, Bird#bird{x=NewX, y=Y+VelocityY, velocityY=VelocityY+?GRAVITY, direction=NewDirection}}.
 
 
+%% This function sends 2 new inputs (height & distance from wall) to the neural network and asks it to start the feed-forward.
 run_NN(_Bird = #bird{x=X, y=Y, direction=Direction, nnPID=NN_PID}) ->
 	case Direction of
 		r -> NN_PID ! {decide_jump, Y, ?BG_WIDTH-X};

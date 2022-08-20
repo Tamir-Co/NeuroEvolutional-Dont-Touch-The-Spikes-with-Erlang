@@ -14,7 +14,7 @@
 -export([test/0, init/0]).
 
 %% =================================================================
-% A test function used to test the functionality of the neuron
+%% A test function used to test the functionality of the neuron
 test()->
 	Self = self(),
 	PID = spawn(fun()-> init() end),
