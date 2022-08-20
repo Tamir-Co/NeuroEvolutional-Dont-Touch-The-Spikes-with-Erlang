@@ -14,7 +14,7 @@ You should open consoles inside the src folder.
 There are multiple ways you can run the program:
 
 ### single console in one computer
-Change the configuration in src/Constants.hrl to:
+Change the configuration in src/constants.hrl to:
 ```erlang
 -define(GRAPHICS_NODE, 'pc0@[enter pc0 hostname]').
 -define(PC1_NODE,      'pc0@[enter pc0 hostname]').
@@ -29,7 +29,7 @@ erl -sname 'pc0' -setcookie yummy
 Then move to the Run instructions.
 
 ### five consoles in one computer
-Change the configuration in src/Constants.hrl to:
+Change the configuration in src/constants.hrl to:
 ```erlang
 -define(GRAPHICS_NODE, 'pc0@[enter pc0 hostname]').
 -define(PC1_NODE,      'pc1@[enter pc0 hostname]').
@@ -46,7 +46,7 @@ Where [x] is indexed between 0-4.
 Then move to the Run instructions.
 
 ### five consoles in five different computers
-Change the configuration in src/Constants.hrl to:
+Change the configuration in src/constants.hrl to:
 
 ```erlang
 -define(GRAPHICS_NODE, 'pc1@[enter pc0 ip]').
@@ -58,9 +58,9 @@ Change the configuration in src/Constants.hrl to:
 
 Then in each bash terminal run the following command:
 ```bash
-erl -name 'pc(x)@[pc ip address]' -setcookie yummy
+erl -name 'pc[x]@[pc ip address]' -setcookie yummy
 ```
-Where (x) is indexed between 0-4 and [pc ip address] is the ip of the computer which runs the code.
+Where [x] is indexed between 0-4 and [pc ip address] is the ip of the computer which runs the code.
 
 Then move to the Run instructions.
 
