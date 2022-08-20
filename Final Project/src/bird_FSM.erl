@@ -21,7 +21,7 @@
 start(Name, PC_PID, SpikesList, GraphicState) ->
 	gen_statem:start({local,Name}, ?MODULE, [PC_PID, SpikesList, GraphicState], []).
 
-%% =================================================================
+%% ================================================================= init:
 init([PC_PID, SpikesList, GraphicState]) ->
 	case GraphicState of
 		idle        -> NN_PID = undefined;
@@ -59,16 +59,18 @@ idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->
 idle(info, {weights_list, WeightsList}, Bird=#bird{pcPID=PC_PID, frameCount=FrameCount}) ->
 	gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC with the current frame count and weights list
 	{keep_state, Bird};
-	
-idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore
-	{keep_state, Bird};
-idle(cast, {jump}, Bird) -> % ignore
-	{keep_state, Bird};
-idle(cast, {simulate_frame}, Bird) -> % ignore
-	{keep_state, Bird}.
 
-% =================================================================== simulation:
+% TODO delete:
+%idle(cast, {spikes_list, _SpikesList}, Bird) -> % ignore
+%	{keep_state, Bird};
+%idle(cast, {jump}, Bird) -> % ignore
+%	{keep_state, Bird};
+%idle(cast, {simulate_frame}, Bird) -> % ignore
+%	{keep_state, Bird}.
 
+%% ================================================================== simulation:
+
+%% A message from the PC with new spikes list. If the bird is in play_NEAT mode, the spikes list is sent to its neural network.
 simulation(cast, {spikes_list, SpikesList}, Bird=#bird{nnPID=NN_PID, graphicState=GraphicState}) ->
 	case GraphicState of
 		play_user -> ok;
@@ -76,15 +78,17 @@ simulation(cast, {spikes_list, SpikesList}, Bird=#bird{nnPID=NN_PID, graphicStat
 	end,
 	{keep_state, Bird#bird{spikesList = SpikesList}};
 
-%
+%% A message to tell the bird to jump.
 simulation(cast, {jump}, Bird) ->
 	NextBird = jump(Bird),
 	{keep_state, NextBird};
+	
+%% A message from the graphics (the main node) to tell the bird to simulate the next frame (in play_user mode).
 simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_user}) ->	% play_user
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
 	case IsDead of
 		true ->
-			wx_object:cast(graphics, {user_bird_disqualified}),  % notify graphics that its bird dead
+			wx_object:cast(graphics, {user_bird_disqualified}),  % notify graphics that its bird is dead
 			io:format("Game Over!~n"),
 			{next_state, idle, #bird{}};
 		
@@ -93,23 +97,25 @@ simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicStat
 			wx_object:cast(graphics, {user_bird_location, Y}),
 			{keep_state, NextBird}
 	end;
-simulation(cast, {simulate_frame}, Bird=#bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount, framesToDecide=FramesToDecide, spikesList=SpikesList, graphicState=play_NEAT}) ->     % play_NEAT
+
+%% A message from the PC to tell the bird to simulate the next frame (in play_NEAT mode).
+simulation(cast, {simulate_frame}, Bird=#bird{graphicState=play_NEAT, pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount, framesToDecide=FramesToDecide, spikesList=SpikesList}) ->     % play_NEAT
 	{IsDead, NextBird} = simulate_next_frame_bird(Bird, SpikesList),
-	case IsDead of
+	case IsDead of		% check if the bird dies in the current frame.
 		true ->     % bird is dead
 			NN_PID ! {spikes_list, ?INIT_SPIKE_LIST},
 			NN_PID ! {get_weights},    % get weights from the NN.  TODO delete this:, self()
 			{next_state, idle, #bird{graphicState=play_NEAT, pcPID=PC_PID, nnPID=NN_PID, frameCount=0}};
 		false ->     % bird is alive
-			case FramesToDecide of  % dont ask to jump each frame
+			case FramesToDecide of	% don't ask the NN if the bird need to jump in each frame
 				0 ->
 					run_NN(NextBird),
 					#bird{y=Y} = NextBird,
-					gen_server:cast(PC_PID, {neat_bird_location, Y}),
+					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}};
 				_ ->
 					#bird{y=Y} = NextBird,
-					gen_server:cast(PC_PID, {neat_bird_location, Y}),
+					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=FramesToDecide-1}}
 			end
 	end.
@@ -160,11 +166,14 @@ simulation(cast, {simulate_frame}, Bird=#bird{pcPID=PC_PID, nnPID=NN_PID, frameC
 %%	end.
 
 
-%% =================================================================
+%% ==================================================================
+
+%% The bird performs a jump by setting its Y velocity.
 jump(Bird=#bird{}) ->
 	Bird#bird{velocityY=-?JUMP_VELOCITY}.
 
 
+%% This finction simulate the next frame of the bird. Returns: {IsDead, NewBird}
 simulate_next_frame_bird(Bird=#bird{x=X, y=Y, velocityY=VelocityY, direction=Direction}, SpikesList) ->
 	%% update direction and X value
 	case {Direction, X =< 0, ?BG_WIDTH =< X+?BIRD_WIDTH} of
