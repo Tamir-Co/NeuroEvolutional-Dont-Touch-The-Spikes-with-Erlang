@@ -51,12 +51,6 @@ idle(info, {start_simulation}, Bird=#bird{graphicState=GraphicState}) ->
 %% A message from the PC with new brain/genes. Then, the neural network is set accordingly.
 idle(info, {replace_genes, NewBrain}, Bird=#bird{nnPID = NN_PID}) ->
 	NN_PID ! {set_weights, NewBrain},
-	{keep_state, Bird};
-
-%% A message from the neural_network with the current weight list (current brain).
-%% This is the response to the message {get_weights} which is sent to the neural_network when this bird dies.
-idle(info, {weights_list, WeightsList}, Bird=#bird{pcPID=PC_PID, frameCount=FrameCount}) ->
-	gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC with the current frame count and weights list
 	{keep_state, Bird}.
 
 % TODO delete:
@@ -104,7 +98,8 @@ simulation(cast, {simulate_frame}, Bird=#bird{graphicState=play_NEAT, pcPID=PC_P
 		true ->     % bird is dead
 			NN_PID ! {spikes_list, ?INIT_SPIKE_LIST},
 			NN_PID ! {get_weights},    % get weights from the NN.  TODO delete this:, self()
-			{next_state, idle, #bird{graphicState=play_NEAT, pcPID=PC_PID, nnPID=NN_PID, frameCount=0}};
+			{keep_state, Bird};
+		
 		false ->     % bird is alive
 			case FramesToDecide of	% don't ask the NN if the bird need to jump in each frame
 				0 ->
@@ -112,12 +107,19 @@ simulation(cast, {simulate_frame}, Bird=#bird{graphicState=play_NEAT, pcPID=PC_P
 					#bird{y=Y} = NextBird,
 					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}};
+				
 				_ ->
 					#bird{y=Y} = NextBird,
 					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=FramesToDecide-1}}
 			end
-	end.
+	end;
+
+%% A message from the neural_network with the current weight list (current brain).
+%% This is the response to the message {get_weights} which is sent to the neural_network when this bird dies.
+simulation(info, {weights_list, WeightsList}, _Bird=#bird{pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount}) ->
+	gen_server:cast(PC_PID, {bird_disqualified, self(), FrameCount, WeightsList}),   % send bird_disqualified to PC with the current frame count and weights list
+	{next_state, idle, #bird{graphicState=play_NEAT, pcPID=PC_PID, nnPID=NN_PID}}.
 
 %%simulation(cast, {simulate_frame}, Bird=#bird{spikesList=SpikesList, graphicState=play_NEAT,		% play_NEAT
 %%											  pcPID=PC_PID, nnPID=NN_PID, frameCount=FrameCount, framesToDecide=FramesToDecide}) ->

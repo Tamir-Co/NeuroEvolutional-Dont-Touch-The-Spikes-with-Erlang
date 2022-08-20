@@ -20,7 +20,9 @@
 -define(PC2_NODE,       'pc0@Nadav-VirtualBox').
 -define(PC3_NODE,       'pc0@Nadav-VirtualBox').
 -define(PC4_NODE,       'pc0@Nadav-VirtualBox').
--define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
+
+%% ====================================================================
+-define(PC_NODES, [?PC1_NODE]).%, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%
 
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).
 
@@ -29,7 +31,7 @@
 -define(PC2_NAME, pc2).
 -define(PC3_NAME, pc3).
 -define(PC4_NAME, pc4).
--define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%]).%
+-define(PC_NAMES, [?PC1_NAME]).%, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%
 
 -define(PC_NAME_TO_NODE(PC_Name), maps:get(PC_Name, #{ ?PC1_NAME => ?PC1_NODE, ?PC2_NAME => ?PC2_NODE, ?PC3_NAME => ?PC3_NODE, ?PC4_NAME => ?PC4_NODE })).
 
@@ -87,7 +89,7 @@
 
 
 %% Neural network:
--define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 10, 6, 6, 1]).		% This is the structure of the network. The first and last number from the list are the in/outputs layers.
+-define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 1]).		% This is the structure of the network. The first and last number from the list are the in/outputs layers.
 
 -define(BIAS_RANGE, 50).				% used in division of the range [-0.5,0.5] to a smaller range
 % -define(MUTATION_WEIGHT_FACTOR, 20).	% used in division of the range [-0.5,0.5] to a smaller range
