@@ -25,7 +25,6 @@ init([PC_Name, NumOfPcBirds]) ->
 	?PRINT(pcname, PC_Name),
 	{ok, #pc_bird_server_state{
 		pcName = PC_Name,
-		% graphicState = idle,
 		numOfPcBirds = NumOfPcBirds,
 		numOfAliveBirds = 0,
 		listOfAliveBirds = [],
@@ -36,9 +35,9 @@ init([PC_Name, NumOfPcBirds]) ->
 %% Build a new & unique bird FSM name
 create_bird_FSM_name(PC_Name) -> list_to_atom("bird_FSM_" ++ atom_to_list(PC_Name) ++ integer_to_list(erlang:unique_integer())).
 
-% TODO delete?
+
 handle_call(_Request, _From, _State) ->
-	erlang:error(not_implemented).
+	ok.
 
 
 %% A message from the graphics (the main node) in order to check if this PC is still alive and connected.
@@ -51,7 +50,7 @@ handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_st
 	io:format("Number of birds per PC: ~p~n", [NumOfPcBirds]),
 	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState),
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{finish_init_birds, self(), GraphicState}]),	% tell graphics the PC finished to start_bird_FSMs
-	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap}}; % TODO delete this: graphicState=GraphicState, 
+	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap}};
 
 %% A message from the graphics (the main node) in order to start the simulation state. The pc sends this message to all birds.
 handle_cast({start_simulation}, State=#pc_bird_server_state{birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
@@ -69,22 +68,13 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{listOfAliveBi
 handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->
 %%	?PRINT(simulate_frame),
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
-	{noreply, State#pc_bird_server_state{tempX=undefined, locatedBirdsAmount=0}};
+	{noreply, State#pc_bird_server_state{locatedBirdsAmount=0}};
 
 %% A message from a bird when it dies (in play_NEAT mode)
-handle_cast({neat_bird_location, X, Y}, State=#pc_bird_server_state{tempX=TempX, locatedBirdsAmount=LocatedBirdsAmount}) ->
-	NewTempX =
-		case TempX of
-			undefined -> ?PRINT('PC_x', X), X;
-			_Else -> case X =/= TempX of
-						 true -> error("error X");
-						 false-> ok
-		             end,
-				TempX
-		end,
+handle_cast({neat_bird_location, Y}, State=#pc_bird_server_state{locatedBirdsAmount=LocatedBirdsAmount}) ->
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_location, Y}]),
 %%	?PRINT(locatedBirdsAmount, LocatedBirdsAmount),
-	{noreply, State#pc_bird_server_state{tempX=NewTempX, locatedBirdsAmount=LocatedBirdsAmount + 1}};
+	{noreply, State#pc_bird_server_state{locatedBirdsAmount=LocatedBirdsAmount + 1}};
 
 %% A message from a bird when it dies (in play_NEAT mode)
 handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{pcName=PC_Name, listOfAliveBirds=ListOfAliveBirds,

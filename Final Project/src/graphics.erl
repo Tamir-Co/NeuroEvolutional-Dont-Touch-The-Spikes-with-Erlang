@@ -164,8 +164,8 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_us
 handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
 	SortedBirds = lists:keysort(1, BestCandBirds ++ CandBirds),             % all birds are dead now, send them sorted (by frame count) to graphics
 	{_, NewBestCandBirds} = lists:split(length(SortedBirds) - ?NUM_OF_SURVIVED_BIRDS, SortedBirds),      % take only the ?100? best birds
-%%	?PRINT(newBestCandBirds, NewBestCandBirds),
-%%	?PRINT(length, length(NewBestCandBirds)),
+?PRINT(newBestCandBirds, NewBestCandBirds),
+?PRINT(length, length(NewBestCandBirds)),
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->
@@ -189,7 +189,7 @@ handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=
 			cast_all_PCs(AlivePCsNamesList, {simulate_frame}),
 			{NewDirection, NewX, _Has_changed_dir} = simulate_x_movement(?BIRD_START_X, r),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=trunc(length(AlivePCsNamesList)*(?NUM_OF_BIRDS/?INIT_PC_AMOUNT)),
-										   bird_x=NewX, bird_direction=NewDirection, birdsPerPcMap=NewBirdsPerPcMap, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state. TODO bad with pc down
+										   bird_x=NewX, bird_direction=NewDirection, birdsPerPcMap=NewBirdsPerPcMap, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state
 		
 		_Else ->
 			{noreply, State#graphics_state{waitForPCsAmount=WaitForPCsAmount-1}}
@@ -285,7 +285,6 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 							true  ->
 								cast_all_PCs(NewAlivePCsNamesList, {simulate_frame}),
 								{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
-								?PRINT('GR_x', NewX),
 								case Has_changed_dir of
 									true  ->
 										NewSpikesList = create_spikes_list(trunc(SpikesAmount)),

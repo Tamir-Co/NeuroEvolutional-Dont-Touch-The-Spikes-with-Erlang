@@ -22,18 +22,17 @@
 -define(PC4_NODE,       'pc0@Nadav-VirtualBox').
 
 %% ====================================================================
--define(PC_NODES, [?PC1_NODE]).%, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%
-
--define(INIT_PC_AMOUNT, length(?PC_NODES)).
 
 %% PC names are always unique
 -define(PC1_NAME, pc1).
 -define(PC2_NAME, pc2).
 -define(PC3_NAME, pc3).
 -define(PC4_NAME, pc4).
--define(PC_NAMES, [?PC1_NAME]).%, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%
 
+-define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%]).%
+-define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
 -define(PC_NAME_TO_NODE(PC_Name), maps:get(PC_Name, #{ ?PC1_NAME => ?PC1_NODE, ?PC2_NAME => ?PC2_NODE, ?PC3_NAME => ?PC3_NODE, ?PC4_NAME => ?PC4_NODE })).
+-define(INIT_PC_AMOUNT, length(?PC_NODES)).
 
 
 -define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%ok).%
@@ -79,8 +78,8 @@
 -define(BIRD_START_X, 180).
 -define(BIRD_START_Y, 270).
 
-%% {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {2, 4, 0.5}, {4, 100, 0.2}, {4, 400, 0.2}, {4, 1000, 0.2}
--define(NUM_OF_BIRDS, 400).		% TODO 1000 or other number, and move to graphics
+%% TODO you may change to this values: {PCs, NUM_OF_BIRDS, PERCENT_SURVIVED_BIRDS} = {4, 100, 0.2}, {4, 400, 0.2}, {4, 1000, 0.2}
+-define(NUM_OF_BIRDS, 400).
 -define(PERCENT_SURVIVED_BIRDS, 0.2).	% how many birds are survived after each generation (in %)
 -define(NUM_OF_SURVIVED_BIRDS, ceil(?NUM_OF_BIRDS*?PERCENT_SURVIVED_BIRDS)).   % how many birds are survived after each generation, per PC and generation
 
@@ -153,13 +152,11 @@
 
 -record(pc_bird_server_state, {
 	pcName,
-	% graphicState = idle, TODO delete
 	numOfPcBirds,       % amount of PC birds ?250?
 	numOfAliveBirds,    % amount of birds in simulation right now
 	listOfAliveBirds,   % list of PIDs of current alive (in simulation) birds
 	birdsMap,           % #{PID => {frameCount, WeightsMap}}
-	locatedBirdsAmount = 0,
-	tempX
+	locatedBirdsAmount = 0
 }).
 
 -record(bird, {
