@@ -45,6 +45,7 @@ handle_cast({are_you_alive}, State=#pc_bird_server_state{pcName=PC_Name})->
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{im_alive, PC_Name}]), % send alive message to PC
 	{noreply, State};
 
+% TODO delete spikes_list and graphics state
 %% A message from the graphics (the main node) in order to spawn all birds (in play_NEAT mode).
 handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_state{pcName=PC_Name, birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
 	io:format("Number of birds per PC: ~p~n", [NumOfPcBirds]),
