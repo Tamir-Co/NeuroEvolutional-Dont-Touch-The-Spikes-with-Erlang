@@ -96,7 +96,7 @@
 -define(MUTATION_FACTOR, 10).			% used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_MAX_RAND_VAL, 20).		% used to define the probability of a edge deletion (W=0)
 
--define(ACTIVATION_FUNCTION, tanh).
+-define(ACTIVATION_FUNCTION, relu).
 -define(INPUT_ACTIVATION_FUNCTION, identity).
 
 

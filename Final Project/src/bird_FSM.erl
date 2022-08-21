@@ -97,20 +97,20 @@ simulation(cast, {simulate_frame}, Bird=#bird{graphicState=play_NEAT, pcPID=PC_P
 	case IsDead of		% check if the bird dies in the current frame.
 		true ->     % bird is dead
 			NN_PID ! {spikes_list, ?INIT_SPIKE_LIST},
-			NN_PID ! {get_weights},    % get weights from the NN.  TODO delete this:, self()
+			NN_PID ! {get_weights},    % get weights from the NN
 			{keep_state, Bird};
 		
 		false ->     % bird is alive
 			case FramesToDecide of	% don't ask the NN if the bird need to jump in each frame
 				0 ->
 					run_NN(NextBird),
-					#bird{x=X, y=Y} = NextBird,
-					gen_server:cast(PC_PID, {neat_bird_location, X, Y}),	% sends the new Y location to the PC.
+					#bird{y=Y} = NextBird,
+					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}};
 				
 				_ ->
-					#bird{x=X, y=Y} = NextBird,
-					gen_server:cast(PC_PID, {neat_bird_location, X, Y}),	% sends the new Y location to the PC.
+					#bird{y=Y} = NextBird,
+					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=FramesToDecide-1}}
 			end
 	end;

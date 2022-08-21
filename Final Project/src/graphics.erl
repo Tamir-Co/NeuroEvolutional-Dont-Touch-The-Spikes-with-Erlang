@@ -164,8 +164,6 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_us
 handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
 	SortedBirds = lists:keysort(1, BestCandBirds ++ CandBirds),             % all birds are dead now, send them sorted (by frame count) to graphics
 	{_, NewBestCandBirds} = lists:split(length(SortedBirds) - ?NUM_OF_SURVIVED_BIRDS, SortedBirds),      % take only the ?100? best birds
-?PRINT(newBestCandBirds, NewBestCandBirds),
-?PRINT(length, length(NewBestCandBirds)),
 	NewState =
 		case WaitForPCsAmount of     % how many PCs are running (birds) simulation now
 			1 ->

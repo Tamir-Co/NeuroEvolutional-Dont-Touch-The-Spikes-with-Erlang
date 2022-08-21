@@ -26,9 +26,8 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 	receive
 		{decide_jump, BirdHeight, BirdWallDistance} ->
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
-					true  -> gen_statem:cast(BirdPID, {jump}); % bird jump
-%%					true  -> BirdPID ! {jump, FrameCount}; % bird jump TODO delete
-					false -> ok                           % bird doesn't jump
+					true  -> gen_statem:cast(BirdPID, {jump});  % bird jump
+					false -> ok                                 % bird doesn't jump
 				end,
 				loop(NN_Data);
 		
@@ -41,7 +40,7 @@ loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMa
 				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 
 
-		{get_weights} -> % TODO delete this:, From
+		{get_weights} ->
 				SortedWeightsByIdx = lists:sort(fun(Edge1, Edge2) -> ordering(Edge1, Edge2) end, maps:to_list(WeightsMap)),
 				{_Edges, Weights} = lists:unzip(SortedWeightsByIdx),
 				BirdPID ! {weights_list, Weights},  % send the bird its "brain" (weights) as a list
