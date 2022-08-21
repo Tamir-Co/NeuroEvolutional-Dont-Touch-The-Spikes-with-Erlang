@@ -159,7 +159,7 @@ feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList) ->
 	Self = self(),
 	lists:nth(Layer1Len, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdHeight},			% insert BirdHeight
 	lists:nth(Layer1Len-1, maps:get({layer, 1}, N_PIDsLayersMap)) ! {neuron, Self, BirdWallDistance},	% insert BirdWallDistance
-	feed_spike_list(maps:get({layer, 1}, N_PIDsLayersMap), SpikesList, ?MAX_SPIKES_AMOUNT).			% insert SpikesList
+	feed_spike_list(maps:get({layer, 1}, N_PIDsLayersMap), SpikesList, ?MAX_SPIKES_AMOUNT).			    % insert SpikesList
 
 %% Insert spike list
 feed_spike_list(_FirstLayerN_PIDs, _SpikesList, 0) -> ok;

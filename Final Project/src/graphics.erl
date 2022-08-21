@@ -60,8 +60,8 @@ init(_Args) ->
 	FontScore = wxFont:new(13, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
 	wxStaticText:setFont(TxtScore, FontScore),
 	
-	TxtBirdsPerPc = wxStaticText:new(Panel, -1, "", [{style, ?wxALIGN_CENTRE}, {pos, {5, ?BOTTOM_RECT_Y+30}}]),
-	FontBirdsPerPC = wxFont:new(8, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
+	TxtBirdsPerPc = wxStaticText:new(Panel, -1, "", [{style, ?wxALIGN_LEFT}, {pos, {10, ?BOTTOM_RECT_Y+30}}]),
+	FontBirdsPerPC = wxFont:new(9, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_BOLD),
 	wxStaticText:setFont(TxtBirdsPerPc, FontBirdsPerPC),
 	
 	ImageBird_R = wxImage:new("images/bird_RIGHT.png", []),
@@ -339,7 +339,7 @@ handle_sync_event(_Event, _, _State=#graphics_state{curr_state=CurrState, spikes
 		
 		play_NEAT_simulation ->
 			wxStaticText:setLabel(TxtScore, ScoreLabel ++ "\nGeneration: " ++ integer_to_list(GenNum)),
-			wxStaticText:setLabel(TxtBirdsPerPC, "Birds: " ++ io_lib:format("~p", [BirdsPerPcMap])),
+			wxStaticText:setLabel(TxtBirdsPerPC, "Birds:\n" ++ io_lib:format("~p", [BirdsPerPcMap])),
 			List = sets:to_list(BirdList),
 			draw_birds(DC, BitmapBird, X, List);
 		
