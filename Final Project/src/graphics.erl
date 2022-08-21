@@ -120,6 +120,7 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 			cast_all_PCs(AlivePCsNamesList, {start_simulation}),
 			cast_all_PCs(AlivePCsNamesList, {simulate_frame}),
 			{NewDirection, NewX, _Has_changed_dir} = simulate_x_movement(?BIRD_START_X, r),
+%%			?PRINT('length(NewAlivePCsNamesList) finish_init_birds', length(AlivePCsNamesList)),
 			{noreply, State#graphics_state{ curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList),
 											bird_x=NewX, bird_direction=NewDirection, numOfAliveBirds=?NUM_OF_BIRDS, birdsPerPcMap=NewBirdsPerPcMap}};	% only after all birds had initialized, the graphics_state changes its state.
 		
@@ -170,6 +171,7 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 				FinalBestCandBirds = element(2, lists:unzip(NewBestCandBirds)),
 				ReverseList = lists:reverse(FinalBestCandBirds),
 				send_best_birds(ReverseList, AlivePCsNamesList),    % send the best birds to the PCs
+%%				?PRINT('length(NewAlivePCsNamesList) pc_finished_simulation', length(AlivePCsNamesList)),
 				State#graphics_state{curr_state=play_NEAT_population, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(AlivePCsNamesList),
 					bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 			
@@ -180,12 +182,15 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 
 %% A message from a PC that represents that he finished the population. If all PCs finished, the graphics changes to play_NEAT_simulation state.
 handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, genNum=GenNum, score=Score, bestScore=BestScore})->
+	
+	?PRINT('WaitForPCsAmount pc_finished_population', WaitForPCsAmount),
 	case WaitForPCsAmount of
 		1 ->
 			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
 			cast_all_PCs(AlivePCsNamesList, {start_simulation}),
 			cast_all_PCs(AlivePCsNamesList, {simulate_frame}),
 			{NewDirection, NewX, _Has_changed_dir} = simulate_x_movement(?BIRD_START_X, r),
+%%			?PRINT('length(NewAlivePCsNamesList) pc_finished_population', length(AlivePCsNamesList)),
 			{noreply, State#graphics_state{curr_state=play_NEAT_simulation, waitForPCsAmount=length(AlivePCsNamesList), numOfAliveBirds=trunc(length(AlivePCsNamesList)*(?NUM_OF_BIRDS/?INIT_PC_AMOUNT)),
 										   bird_x=NewX, bird_direction=NewDirection, birdsPerPcMap=NewBirdsPerPcMap, genNum=GenNum+1, score=0, bestScore=max(BestScore, Score)}};	% only after all birds had initialized, the graphics_state changes its state
 		
@@ -270,11 +275,12 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				
 			play_NEAT_simulation ->
 				erlang:send_after(?TIMER_NEAT, self(), timer),	% set new timer
-				NumOfAliveBirds = maps:fold(fun(_, NumBirds, Acc) -> Acc + NumBirds end, 0, BirdsPerPcMap),
+				NumOfAliveBirds = maps:fold(fun(_, NumBirds, Acc) -> Acc + NumBirds end, 0, NewBirdsPerPcMap),
 				case NumOfAliveBirds of
 					0 ->    % go to population when last PC died
 						FinalBestCandBirds = element(2, lists:unzip(BestCandBirds)),
 						send_best_birds(lists:reverse(FinalBestCandBirds), NewAlivePCsNamesList),
+%%						?PRINT('length(NewAlivePCsNamesList) timer', length(NewAlivePCsNamesList)),
 						State#graphics_state{curr_state=play_NEAT_population, locatedBirdsAmount=0, bestPreviousBrain=lists:last(FinalBestCandBirds), waitForPCsAmount=length(NewAlivePCsNamesList),
 						bestCandBirds=[], bird_x=?BIRD_START_X, bird_direction=r, spikesList=?INIT_SPIKE_LIST, spikesAmount=?INIT_SPIKES_WALL_AMOUNT};
 					
@@ -385,8 +391,15 @@ check_timeout(_State=#graphics_state{timeCount=TimeCount, recvACKsPCsNamesList=R
 %% Gets a lists of the PCs that just died and removes them from the map with the amount of alive birds per PC.
 update_birdsPerPcMap(BirdsPerPcMap, AlivePCsNamesList, RecvACKsPCsNamesList, WaitForPCsAmount) ->
 	case AlivePCsNamesList -- RecvACKsPCsNamesList of
-		[] -> {BirdsPerPcMap, WaitForPCsAmount}; % no new dead PC
-		DeadPCs -> {maps:map(fun(PC_Name, Num_Birds) -> case lists:member(PC_Name, DeadPCs) of true -> 0; false -> Num_Birds  end end, BirdsPerPcMap), WaitForPCsAmount - length(DeadPCs)}
+		[] ->
+			{BirdsPerPcMap, WaitForPCsAmount};  % no new dead PC
+	
+		DeadPCs ->
+			case WaitForPCsAmount - length(DeadPCs) of  % how many PCs the graphics waits for
+				0 -> NewWaitForPCsAmount = length(RecvACKsPCsNamesList);    % reset WaitForPCsAmount to the new alive PCs amount
+				_ -> NewWaitForPCsAmount = WaitForPCsAmount - length(DeadPCs)
+			end,
+			{maps:map(fun(PC_Name, Num_Birds) -> case lists:member(PC_Name, DeadPCs) of true -> 0; false -> Num_Birds  end end, BirdsPerPcMap), NewWaitForPCsAmount}
 	end.
 
 
