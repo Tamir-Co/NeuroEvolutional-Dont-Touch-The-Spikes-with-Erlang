@@ -12,23 +12,22 @@
 -include("constants.hrl").
 
 %% API
--export([start/4]).
+-export([start/3]).
 -export([init/1, callback_mode/0, terminate/3, stop/0]).
 -export([idle/3, simulation/3]).
 
 %% =================================================================
 %% Creates a gen_statem process which calls bird_FSM:init/1
-start(Name, PC_PID, SpikesList, GraphicState) ->
-	gen_statem:start({local,Name}, ?MODULE, [PC_PID, SpikesList, GraphicState], []).
+start(Name, PC_PID, GraphicState) ->
+	gen_statem:start({local,Name}, ?MODULE, [PC_PID, GraphicState], []).
 
 %% ================================================================= init:
-init([PC_PID, SpikesList, GraphicState]) ->
+init([PC_PID, GraphicState]) ->
 	case GraphicState of
 		idle        -> NN_PID = undefined;
 		play_NEAT   -> Self = self(), NN_PID = spawn_link(fun() -> neural_network:init(?NN_STRUCTURE, Self) end) % init NN
 	end,
 	{ok, idle, #bird{pcPID = PC_PID,
-					 spikesList = SpikesList,
 					 graphicState = GraphicState,
 					 nnPID = NN_PID
 					 }}.

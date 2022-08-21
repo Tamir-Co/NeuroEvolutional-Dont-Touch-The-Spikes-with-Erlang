@@ -45,11 +45,10 @@ handle_cast({are_you_alive}, State=#pc_bird_server_state{pcName=PC_Name})->
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{im_alive, PC_Name}]), % send alive message to PC
 	{noreply, State};
 
-% TODO delete spikes_list and graphics state
 %% A message from the graphics (the main node) in order to spawn all birds (in play_NEAT mode).
-handle_cast({start_bird_FSM, GraphicState, SpikesList}, State=#pc_bird_server_state{pcName=PC_Name, birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
+handle_cast({start_bird_FSM, GraphicState}, State=#pc_bird_server_state{pcName=PC_Name, birdsMap=BirdsMap, numOfPcBirds=NumOfPcBirds}) ->
 	io:format("Number of birds per PC: ~p~n", [NumOfPcBirds]),
-	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState),
+	NewBirdsMap = start_bird_FSM(NumOfPcBirds, PC_Name, BirdsMap, GraphicState),
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{finish_init_birds, self(), GraphicState}]),	% tell graphics the PC finished to start_bird_FSMs
 	{noreply, State#pc_bird_server_state{birdsMap=NewBirdsMap}};
 
@@ -87,7 +86,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 		1 ->
 			SortedBirds = lists:keysort(1, maps:values(NewBirdsMap)),           % all birds are dead now, send them sorted (by frame count) to graphics
 			{_, CandBirds} = lists:split(NumOfPcBirds-?NUM_OF_SURVIVED_BIRDS, SortedBirds),  % take only the ?100? best birds
-			rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_simulation, self(), CandBirds}]);
+			rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_simulation, CandBirds}]);
 		
 		_Else ->
 			ok
@@ -97,7 +96,7 @@ handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bir
 %% A message from the graphics (the main node) with a list of brains to create mutations from, and populate the next generation (in play_NEAT mode).
 handle_cast({populate_next_gen, BestBrains}, State=#pc_bird_server_state{birdsMap=BirdsMap}) ->
 	create_mutations_and_send(maps:keys(BirdsMap), BestBrains),    % create mutations and send the new weights to the birds
-	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_population, self()}]),
+	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{pc_finished_population}]),
 	{noreply, State#pc_bird_server_state{}}.
 
 
@@ -107,10 +106,10 @@ pc_rpc(Pc, Msg)->
 
 %% =================================================================
 %% Start all bird FSMs and return a new bird map
-start_bird_FSM(0, _PC_Name, _SpikesList, BirdsMap, _GraphicState) -> BirdsMap;
-start_bird_FSM(NumOfPcBirds, PC_Name, SpikesList, BirdsMap, GraphicState) ->
-	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), SpikesList, GraphicState),
-	start_bird_FSM(NumOfPcBirds-1, PC_Name, SpikesList, BirdsMap#{BirdPID => {0, []}}, GraphicState).
+start_bird_FSM(0, _PC_Name, BirdsMap, _GraphicState) -> BirdsMap;
+start_bird_FSM(NumOfPcBirds, PC_Name, BirdsMap, GraphicState) ->
+	{ok, BirdPID} = bird_FSM:start(create_bird_FSM_name(PC_Name), self(), GraphicState),
+	start_bird_FSM(NumOfPcBirds-1, PC_Name, BirdsMap#{BirdPID => {0, []}}, GraphicState).
 
 
 %% Send message/cast to specific birds

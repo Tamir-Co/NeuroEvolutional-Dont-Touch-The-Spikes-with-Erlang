@@ -162,7 +162,7 @@ handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_us
 
 
 %% A message from a PC that represents that he finished the simulation. If all PCs finished, the graphics changes to play_NEAT_population state.
-handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
+handle_cast({pc_finished_simulation, CandBirds}, State=#graphics_state{curr_state=play_NEAT_simulation, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, bestCandBirds=BestCandBirds})->
 	SortedBirds = lists:keysort(1, BestCandBirds ++ CandBirds),             % all birds are dead now, send them sorted (by frame count) to graphics
 	{_, NewBestCandBirds} = lists:split(length(SortedBirds) - ?NUM_OF_SURVIVED_BIRDS, SortedBirds),      % take only the ?100? best birds
 	NewState =
@@ -181,7 +181,7 @@ handle_cast({pc_finished_simulation, _PC_PID, CandBirds}, State=#graphics_state{
 	{noreply, NewState};
 
 %% A message from a PC that represents that he finished the population. If all PCs finished, the graphics changes to play_NEAT_simulation state.
-handle_cast({pc_finished_population, _PC_PID}, State=#graphics_state{curr_state=play_NEAT_population, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, genNum=GenNum, score=Score, bestScore=BestScore})->
+handle_cast({pc_finished_population}, State=#graphics_state{curr_state=play_NEAT_population, alivePCsNamesList=AlivePCsNamesList, waitForPCsAmount=WaitForPCsAmount, genNum=GenNum, score=Score, bestScore=BestScore})->
 	
 	?PRINT('WaitForPCsAmount pc_finished_population', WaitForPCsAmount),
 	case WaitForPCsAmount of
@@ -214,7 +214,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 		{idle, ?ButtonStartNEATID} ->
 			wxSizer:hide(UiSizer, StartSizer, []),
 			wxSizer:layout(MainSizer),
-			cast_all_PCs(AlivePCsNamesList, {start_bird_FSM, play_NEAT, SpikesList}),
+			cast_all_PCs(AlivePCsNamesList, {start_bird_FSM, play_NEAT}),
 			State#graphics_state{score=0, bestScore=0};
 		
 		{play_user, ?ButtonJumpID} ->
@@ -476,7 +476,7 @@ send_best_birds(BestCandBirds, [PC_Name|PC_NamesT]) ->
 
 %% =================================================================
 init_system() ->
-	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), ?INIT_SPIKE_LIST, idle),    % the graphics owns the user bird
+	{ok, BirdUserPID} = bird_FSM:start(create_bird_FSM_name(graphics), self(), idle),    % the graphics owns the user bird
 	init_PCs(?PC_NODES, ?PC_NAMES),
 	{BirdUserPID}.
 
