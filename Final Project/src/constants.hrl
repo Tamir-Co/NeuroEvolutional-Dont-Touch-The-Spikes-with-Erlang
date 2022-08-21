@@ -158,7 +158,8 @@
 	numOfAliveBirds,    % amount of birds in simulation right now
 	listOfAliveBirds,   % list of PIDs of current alive (in simulation) birds
 	birdsMap,           % #{PID => {frameCount, WeightsMap}}
-	locatedBirdsAmount = 0
+	locatedBirdsAmount = 0,
+	tempX
 }).
 
 -record(bird, {

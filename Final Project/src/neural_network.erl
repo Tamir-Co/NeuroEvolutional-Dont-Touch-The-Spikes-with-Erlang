@@ -166,7 +166,7 @@ feed_inputs(N_PIDsLayersMap, BirdHeight, BirdWallDistance, SpikesList) ->
 feed_spike_list(_FirstLayerN_PIDs, _SpikesList, 0) -> ok;
 feed_spike_list(FirstLayerN_PIDs, SpikesList, Idx) ->
 	Self = self(),
-	lists:nth(Idx, FirstLayerN_PIDs) ! {neuron, Self, lists:nth(Idx, SpikesList)},% * (?SPIKES_TOP_Y + Idx*(?SPIKE_WIDTH + ?SPIKE_GAP_Y))
+	lists:nth(Idx, FirstLayerN_PIDs) ! {neuron, Self, lists:nth(Idx, SpikesList) * (?SPIKES_TOP_Y + Idx*(?SPIKE_WIDTH + ?SPIKE_GAP_Y))},%      *?SPIKE_VALUE
 	feed_spike_list(FirstLayerN_PIDs, SpikesList, Idx-1).
 
 

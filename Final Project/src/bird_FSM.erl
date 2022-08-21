@@ -104,13 +104,13 @@ simulation(cast, {simulate_frame}, Bird=#bird{graphicState=play_NEAT, pcPID=PC_P
 			case FramesToDecide of	% don't ask the NN if the bird need to jump in each frame
 				0 ->
 					run_NN(NextBird),
-					#bird{y=Y} = NextBird,
-					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
+					#bird{x=X, y=Y} = NextBird,
+					gen_server:cast(PC_PID, {neat_bird_location, X, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=?FRAMES_BETWEEN_DECIDE_JUMP}};
 				
 				_ ->
-					#bird{y=Y} = NextBird,
-					gen_server:cast(PC_PID, {neat_bird_location, Y}),	% sends the new Y location to the PC.
+					#bird{x=X, y=Y} = NextBird,
+					gen_server:cast(PC_PID, {neat_bird_location, X, Y}),	% sends the new Y location to the PC.
 					{keep_state, NextBird#bird{frameCount = FrameCount + 1, framesToDecide=FramesToDecide-1}}
 			end
 	end;

@@ -69,13 +69,22 @@ handle_cast({spikes_list, SpikesList}, State=#pc_bird_server_state{listOfAliveBi
 handle_cast({simulate_frame}, State=#pc_bird_server_state{listOfAliveBirds=ListOfAliveBirds}) ->
 %%	?PRINT(simulate_frame),
 	msg_to_birds(ListOfAliveBirds, {simulate_frame}, false),
-	{noreply, State#pc_bird_server_state{locatedBirdsAmount=0}};
+	{noreply, State#pc_bird_server_state{tempX=undefined, locatedBirdsAmount=0}};
 
 %% A message from a bird when it dies (in play_NEAT mode)
-handle_cast({neat_bird_location, Y}, State=#pc_bird_server_state{locatedBirdsAmount=LocatedBirdsAmount}) ->
+handle_cast({neat_bird_location, X, Y}, State=#pc_bird_server_state{tempX=TempX, locatedBirdsAmount=LocatedBirdsAmount}) ->
+	NewTempX =
+		case TempX of
+			undefined -> ?PRINT('PC_x', X), X;
+			_Else -> case X =/= TempX of
+						 true -> error("error X");
+						 false-> ok
+		             end,
+				TempX
+		end,
 	rpc:call(?GRAPHICS_NODE, graphics, graphics_rpc, [{neat_bird_location, Y}]),
 %%	?PRINT(locatedBirdsAmount, LocatedBirdsAmount),
-	{noreply, State#pc_bird_server_state{locatedBirdsAmount=LocatedBirdsAmount + 1}};
+	{noreply, State#pc_bird_server_state{tempX=NewTempX, locatedBirdsAmount=LocatedBirdsAmount + 1}};
 
 %% A message from a bird when it dies (in play_NEAT mode)
 handle_cast({bird_disqualified, BirdPID, FrameCount, WeightsList}, State=#pc_bird_server_state{pcName=PC_Name, listOfAliveBirds=ListOfAliveBirds,
