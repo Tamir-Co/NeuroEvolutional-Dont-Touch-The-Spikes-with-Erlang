@@ -21,12 +21,12 @@ init(NetworkStructure, BirdPID) ->
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList, birdPID=BirdPID}).
 
 
-%% This is the main loop. this module acts according to actions it gets as messages.
+%% This is the main loop. This module acts according to the actions it gets as messages.
 loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, spikesList=SpikesList, n_PIDsList=N_PIDsList, birdPID=BirdPID}) ->
 	receive
 		{decide_jump, BirdHeight, BirdWallDistance} ->
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
-					true  -> gen_statem:cast(BirdPID, {jump});  % bird jump
+					true  -> gen_statem:cast(BirdPID, {jump});  % send the bird to jump
 					false -> ok                                 % bird doesn't jump
 				end,
 				loop(NN_Data);
@@ -98,6 +98,7 @@ random_weight(Idx) ->
 				_ -> rand:uniform() - 0.5   % random new weight
 			end
 	end.
+
 
 %% Gets an index of an edge and returning a random bias
 rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->

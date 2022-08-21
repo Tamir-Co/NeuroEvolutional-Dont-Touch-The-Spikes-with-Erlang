@@ -9,17 +9,17 @@
 -author("Nadav & Tamir").
 
 %% PC nodes depend on the shell amount
-%% TODO change only this!
+%% TODO change this!
 %-define(GRAPHICS_NODE,  'pc0@tamir').
 %-define(PC1_NODE,       'pc1@tamir').
 %-define(PC2_NODE,       'pc2@tamir').
 %-define(PC3_NODE,       'pc3@tamir').
 %-define(PC4_NODE,       'pc4@tamir').
 -define(GRAPHICS_NODE,  'pc0@Nadav-VirtualBox').
--define(PC1_NODE,       'pc0@Nadav-VirtualBox').
--define(PC2_NODE,       'pc0@Nadav-VirtualBox').
--define(PC3_NODE,       'pc0@Nadav-VirtualBox').
--define(PC4_NODE,       'pc0@Nadav-VirtualBox').
+-define(PC1_NODE,       'pc1@Nadav-VirtualBox').
+-define(PC2_NODE,       'pc2@Nadav-VirtualBox').
+-define(PC3_NODE,       'pc3@Nadav-VirtualBox').
+-define(PC4_NODE,       'pc4@Nadav-VirtualBox').
 
 %% ====================================================================
 
@@ -91,8 +91,6 @@
 -define(NN_STRUCTURE, [2+?MAX_SPIKES_AMOUNT, 6, 6, 6, 1]).		% This is the structure of the network. The first and last number from the list are the in/outputs layers.
 
 -define(BIAS_RANGE, 50).				% used in division of the range [-0.5,0.5] to a smaller range
-% -define(MUTATION_WEIGHT_FACTOR, 20).	% used in division of the range [-0.5,0.5] to a smaller range
-% -define(MUTATION_BIAS_FACTOR, 1).		% used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_FACTOR, 10).			% used in division of the range [-0.5,0.5] to a smaller range
 -define(MUTATION_MAX_RAND_VAL, 20).		% used to define the probability of a edge deletion (W=0)
 
@@ -145,9 +143,7 @@
 	waitForPCsAmount,
 	birdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- ?PC_NAMES]),
 	timeCount = 0,
-	genNum = 1,
-	bestPreviousBrain,
-	brainList = []
+	genNum = 1
 }).
 
 -record(pc_bird_server_state, {
