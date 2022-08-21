@@ -8,7 +8,6 @@
 %%%-------------------------------------------------------------------
 -author("Nadav & Tamir").
 
-%% PC nodes depend on the shell amount
 %% TODO change this!
 %-define(GRAPHICS_NODE,  'pc0@tamir').
 %-define(PC1_NODE,       'pc1@tamir').
@@ -29,15 +28,15 @@
 -define(PC3_NAME, pc3).
 -define(PC4_NAME, pc4).
 
--define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).%]).%
--define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).%]).%
+-define(PC_NAMES, [?PC1_NAME, ?PC2_NAME, ?PC3_NAME, ?PC4_NAME]).
+-define(PC_NODES, [?PC1_NODE, ?PC2_NODE, ?PC3_NODE, ?PC4_NODE]).
 -define(PC_NAME_TO_NODE(PC_Name), maps:get(PC_Name, #{ ?PC1_NAME => ?PC1_NODE, ?PC2_NAME => ?PC2_NODE, ?PC3_NAME => ?PC3_NODE, ?PC4_NAME => ?PC4_NODE })).
 -define(INIT_PC_AMOUNT, length(?PC_NODES)).
 
 
--define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).%ok).%
--define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).%ok).%
--define(PRINT(),io:format("~n")).%ok).%
+-define(PRINT(Text, Arg), io:format(atom_to_list(Text) ++ " ~p~n", [Arg])).
+-define(PRINT(Text), io:format(atom_to_list(Text) ++ "~n")).
+-define(PRINT(),io:format("~n")).
 
 
 %% Frame structure:

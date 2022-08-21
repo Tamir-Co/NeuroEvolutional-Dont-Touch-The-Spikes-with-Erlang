@@ -26,7 +26,7 @@ start() ->
 	wx_object:start({local,?SERVER}, ?MODULE, [], []).
 
 init(_Args) ->
-	process_flag(trap_exit, true),  % TODO
+	process_flag(trap_exit, true),
 	
 	WxServer = wx:new(),
 	Frame = wxFrame:new(WxServer, ?wxID_ANY, "Don't Touch The Spikes - Nadav & Tamir", [{size,{?BG_WIDTH, ?BG_HEIGHT}}]),
@@ -117,7 +117,6 @@ handle_cast({finish_init_birds, _PC_PID, _CurrState}, State=#graphics_state{wait
 	case WaitForPCsAmount of
 		1 ->
 			NewBirdsPerPcMap = maps:from_list([{PC_Name, trunc(?NUM_OF_BIRDS / ?INIT_PC_AMOUNT)} || PC_Name <- AlivePCsNamesList]),
-			?PRINT(finish_init, NewBirdsPerPcMap),
 			cast_all_PCs(AlivePCsNamesList, {start_simulation}),
 			cast_all_PCs(AlivePCsNamesList, {simulate_frame}),
 			{NewDirection, NewX, _Has_changed_dir} = simulate_x_movement(?BIRD_START_X, r),
@@ -212,7 +211,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 
 %% closing window event
 handle_event(#wx{event = #wxClose{}}, State = #graphics_state{frame = Frame}) -> % close window event
-	io:format("Exiting\n"),
+	io:format("Exiting...\n"),
 	wxWindow:destroy(Frame),
 	wx:destroy(),
 	unregister(sound_proc),

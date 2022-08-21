@@ -146,7 +146,6 @@ decide_jump(_NN_Data = #nn_data{networkStructure=_NetworkStructure, n_PIDsLayers
 receive_NN_output(OutputNeuronPID) ->
 	receive
 		{neuron, OutputNeuronPID, IsJump} ->
-%%				io:format("IsJump: ~p~n", [IsJump]),
 				IsJump > 0;
 		
 		_Else ->    % delete other decide jump messages
