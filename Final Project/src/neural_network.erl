@@ -15,32 +15,39 @@
 
 %% =================================================================
 init(NetworkStructure, BirdPID) ->
+	%% Create neurons
 	{N_PIDsList, N_PIDsLayersMap} = construct_NN(NetworkStructure),
+	
+	%% Create random weights and biases
 	WeightsMap = rand_weights(N_PIDsLayersMap),
+	
+	%% Send each neuron its configurations
 	configure_NN(WeightsMap, N_PIDsList, 1),
+	
+	%% Go to loop
 	loop(#nn_data{networkStructure=NetworkStructure, weightsMap=WeightsMap, n_PIDsLayersMap=N_PIDsLayersMap, n_PIDsList=N_PIDsList, birdPID=BirdPID}).
 
 
 %% This is the main loop. This module acts according to the actions it gets as messages.
 loop(NN_Data = #nn_data{networkStructure=_NetworkStructure, weightsMap=WeightsMap, spikesList=SpikesList, n_PIDsList=N_PIDsList, birdPID=BirdPID}) ->
 	receive
-		{decide_jump, BirdHeight, BirdWallDistance} ->
+		{decide_jump, BirdHeight, BirdWallDistance} ->      % receive from the bird and calculates whether to jump
 				case decide_jump(NN_Data, BirdHeight, BirdWallDistance, SpikesList) of
 					true  -> gen_statem:cast(BirdPID, {jump});  % send the bird to jump
 					false -> ok                                 % bird doesn't jump
 				end,
 				loop(NN_Data);
 		
-		{spikes_list, NewSpikesList}  ->
+		{spikes_list, NewSpikesList}  ->                    % update NN spikes list
 				loop(NN_Data#nn_data{spikesList=NewSpikesList});
 		
-		{set_weights, NewWeightsList} ->
+		{set_weights, NewWeightsList} ->                    % each generation the bird (and the NN) get new brain (weights list)
 				NewWeightsMap = set_weights(NewWeightsList, WeightsMap),
 				configure_NN(NewWeightsMap, N_PIDsList, 1),
 				loop(NN_Data#nn_data{weightsMap=NewWeightsMap});
 
 
-		{get_weights} ->
+		{get_weights} ->                                    % send brain (weights list) to the bird
 				SortedWeightsByIdx = lists:sort(fun(Edge1, Edge2) -> ordering(Edge1, Edge2) end, maps:to_list(WeightsMap)),
 				{_Edges, Weights} = lists:unzip(SortedWeightsByIdx),
 				BirdPID ! {weights_list, Weights},  % send the bird its "brain" (weights) as a list
@@ -84,14 +91,14 @@ rand_neuron_weights(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, PrevLayer
 	Weight = random_weight(Idx),
 	RightNeuronPID = lists:nth(NeuronsIdx, maps:get({layer, LayerIdx}, N_PIDsLayersMap)),
 	LeftNeuronPID  = lists:nth(PrevLayerNeuronsIdx, maps:get({layer, LayerIdx-1}, N_PIDsLayersMap)),
-	NewWeightsMap = WeightsMap#{ {Idx, weight, LeftNeuronPID, RightNeuronPID} => Weight },   % add weight to the NN map
+	NewWeightsMap = WeightsMap#{ {Idx, weight, LeftNeuronPID, RightNeuronPID} => Weight },   % add the weight to the NN map
 	rand_neuron_weights(N_PIDsLayersMap, NewWeightsMap, LayerIdx, NeuronsIdx, PrevLayerNeuronsIdx-1, Idx+1).
 
 
 %% Gets an index of an edge and returning a random weight
 random_weight(Idx) ->
 	case Idx =< hd(?NN_STRUCTURE) * 2 of    % check if the Idx-th edge belongs to the first layer (input neuron)
-		true -> 1;							% don't change the weight of an input
+		true -> 1;							% the weight of an input neuron is 1
 		false ->							% change the weight of an edge randomly
 			case rand:uniform(?MUTATION_MAX_RAND_VAL) of
 				1 -> 0;                     % resets the weight to 0
@@ -103,11 +110,11 @@ random_weight(Idx) ->
 %% Gets an index of an edge and returning a random bias
 rand_neuron_bias(N_PIDsLayersMap, WeightsMap, LayerIdx, NeuronsIdx, Idx) ->
 	case Idx =< hd(?NN_STRUCTURE) * 2 of    % check if the Idx-th edge belongs to the first layer (input neuron)
-		true  -> Bias = 0;
+		true  -> Bias = 0;				    % the bias of an input neuron is 0
 		false -> Bias = (rand:uniform() - 0.5) * ?BIAS_RANGE    % [-0.5,0.5) * 50
 	end,
 	NeuronPID = lists:nth(NeuronsIdx, maps:get({layer, LayerIdx}, N_PIDsLayersMap)),
-	WeightsMap#{ {Idx, bias, NeuronPID} => Bias }.   % add bias to the NN map
+	WeightsMap#{ {Idx, bias, NeuronPID} => Bias }.   % add the bias to the NN map
 
 
 %% Configure all the neurons within the neural network using the WeightsMap
@@ -118,7 +125,6 @@ configure_NN(WeightsMap, [LastNeuronPID], _N_Idx) ->
 	Bias    = hd(maps:values(maps:filter(Pred,WeightsMap))),
 	InPIDs  = [LeftNeuronPID  || {_Idx, weight, LeftNeuronPID,  RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == LastNeuronPID],
 	OutPIDs = [self()],
-	
 	LastNeuronPID ! {configure_neuron, Weights, Bias, ?ACTIVATION_FUNCTION, InPIDs, OutPIDs};
 configure_NN(WeightsMap, [NeuronPID|NeuronPID_T], N_Idx) ->
 	Weights = maps:from_list([{ LeftNeuronPID, maps:get(Key, WeightsMap) } || Key={_Idx, weight, LeftNeuronPID, RightNeuronPID} <- maps:keys(WeightsMap), RightNeuronPID == NeuronPID]),
