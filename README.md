@@ -10,7 +10,7 @@ sodu apt-get install erlang
 ```
 
 ## Usage
-You should open your consoles inside the [Fianl Project/src](https://github.com/Tamir-Co/NeuroEvolutional-Dont-Touch-The-Spikes-with-Erlang/tree/main/Final%20Project/src) folder.
+You should open your consoles inside the [Final Project/src](https://github.com/Tamir-Co/NeuroEvolutional-Dont-Touch-The-Spikes-with-Erlang/tree/main/Final%20Project/src) folder.
 There are multiple ways you can run the program:
 
 ### 1 console in 1 computer
