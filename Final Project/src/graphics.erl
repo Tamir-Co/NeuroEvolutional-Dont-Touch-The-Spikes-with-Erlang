@@ -143,7 +143,7 @@ handle_cast({neat_bird_disqualified, PC_Name}, State=#graphics_state{curr_state=
 
 %% A message from a bird when it dies (in play_user mode)
 handle_cast({user_bird_disqualified}, State=#graphics_state{curr_state = play_user})->
-	sound_proc ! "lose_trim",
+	sound_proc ! "lose",
 	NewState = State#graphics_state{curr_state=idle, birdUser=#bird{}, bird_x=?BIRD_START_X, bird_direction=r, spikesAmount=?INIT_SPIKES_WALL_AMOUNT},
 	{noreply, NewState};
 
@@ -200,7 +200,7 @@ handle_event(#wx{id=ID, event=#wxCommand{type=command_button_clicked}}, State=#g
 			State#graphics_state{score=0, bestScore=0};
 		
 		{play_user, ?ButtonJumpID} ->
-			sound_proc ! "jump_trim",
+			sound_proc ! "jump",
 			gen_statem:cast(BirdUserPID, {jump}),
 			State;
 			
@@ -241,7 +241,7 @@ handle_info(timer, State=#graphics_state{uiSizer=UiSizer, startSizer=StartSizer,
 				{NewDirection, NewX, Has_changed_dir} = simulate_x_movement(Bird_x, Bird_dir),
 				case Has_changed_dir of
 					true  ->
-						sound_proc ! "bonus_trim",
+						sound_proc ! "bonus",
 						NewSpikesList = create_spikes_list(trunc(SpikesAmount)),
 						gen_statem:cast(BirdUserPID, {spikes_list, NewSpikesList}),
 						NewSpikesAmount = min(SpikesAmount + ?ADD_SPIKES_WALL_TOUCH, ?MAX_RATIONAL_SPIKES_AMOUNT),
